@@ -1682,6 +1682,89 @@ async def send_admin_fallback_log(error_msg: str, user_id: int):
     except Exception as e:
         print(f"⚠️ Error sending fallback log to admin: {e}")
 
+
+# ==========================================
+# تعریف اسکیما ابزارهای هوشمند Gemma 4 (Google Search + Tools)
+# ==========================================
+GEMMA_TOOLS = [
+    genai_types.Tool(
+        google_search=genai_types.GoogleSearch()
+    ),
+    genai_types.Tool(
+        function_declarations=[
+            genai_types.FunctionDeclaration(
+                name="generate_image_fn",
+                description="Generates a BRAND NEW AI image from text description FROM SCRATCH.",
+                parameters=genai_types.Schema(
+                    type=genai_types.Type.OBJECT,
+                    properties={
+                        "prompt": genai_types.Schema(
+                            type=genai_types.Type.STRING,
+                            description="The detailed English prompt of the image to be generated."
+                        )
+                    },
+                    required=["prompt"]
+                )
+            ),
+            genai_types.FunctionDeclaration(
+                name="edit_image_fn",
+                description="Edits, modifies, alters, changes, or retouches an EXISTING image/photo provided or replied to in the message.",
+                parameters=genai_types.Schema(
+                    type=genai_types.Type.OBJECT,
+                    properties={
+                        "prompt": genai_types.Schema(
+                            type=genai_types.Type.STRING,
+                            description="The concise English edit instruction describing what changes to make to the photo."
+                        )
+                    },
+                    required=["prompt"]
+                )
+            ),
+            genai_types.FunctionDeclaration(
+                name="generate_music_fn",
+                description="Generates a complete AI song or music track using emusic-1.5. Songs are VOCAL BY DEFAULT with full lyrics unless explicitly requested as instrumental.",
+                parameters=genai_types.Schema(
+                    type=genai_types.Type.OBJECT,
+                    properties={
+                        "prompt": genai_types.Schema(
+                            type=genai_types.Type.STRING,
+                            description="Detailed English description of musical style, unique instruments, rhythm groove, and production."
+                        ),
+                        "lyrics": genai_types.Schema(
+                            type=genai_types.Type.STRING,
+                            description="Structured song lyrics with tags like [Intro], [Verse 1], [Chorus], [Bridge], [Outro]. Required for vocal songs."
+                        ),
+                        "instrumental": genai_types.Schema(
+                            type=genai_types.Type.BOOLEAN,
+                            description="False by default for vocal songs with lyrics. True ONLY if explicitly asked for instrumental."
+                        ),
+                        "duration": genai_types.Schema(
+                            type=genai_types.Type.INTEGER,
+                            description="Target duration of the track in seconds (60 to 300)."
+                        ),
+                        "bpm": genai_types.Schema(
+                            type=genai_types.Type.STRING,
+                            description="Target tempo in beats per minute (e.g. '90', '128', 'auto')."
+                        ),
+                        "key": genai_types.Schema(
+                            type=genai_types.Type.STRING,
+                            description="Musical key (e.g. 'D minor', 'A Major', 'F# minor')."
+                        ),
+                        "time_signature": genai_types.Schema(
+                            type=genai_types.Type.STRING,
+                            description="Time signature string (e.g. '4/4', '3/4', '6/8')."
+                        )
+                    },
+                    required=["prompt", "instrumental"]
+                )
+            )
+        ]
+    )
+]
+
+# نام مستعار برای سازگاری کامل با بخش‌های قبلی
+GEMINI_TOOLS = GEMMA_TOOLS
+
 # ==========================================
 # موتور اصلی پردازش، جستجو و استریم پیام‌ها با Gemma-4-31b-it
 # ==========================================

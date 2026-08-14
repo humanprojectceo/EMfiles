@@ -649,17 +649,17 @@ async def clear_redis_limits_once():
 
 
 # ==========================================
-# کلاس پایه کلید هوشمند با ردیابی بار پردازشی و محدودیت نرخ
-# (RPM: 30, TPM: 16K, RPD: 14.4K, Cooldown: 1s)
+# کلاس پایه کلید هوشمند با کنترل بار (Gemma 4 + Gemini Live)
+# RPM: 30 | TPM: 16K | RPD: 14.4K | Cooldown: 1s
 # ==========================================
 class SmartKeyInfo:
     def __init__(self, key: str):
         self.key = key
         self.active_requests = 0
-        self.request_timestamps = []       # RPM (در ۶۰ ثانیه اخیر)
-        self.token_usage_timestamps = []   # TPM (در ۶۰ ثانیه اخیر)
-        self.daily_request_timestamps = [] # RPD (در ۲۴ ساعت اخیر)
-        self.last_used_time = 0.0          # فاصله حداقل ۱ ثانیه بین درخواست‌ها روی این کلید
+        self.request_timestamps = []       # محاسبه RPM در ۶۰ ثانیه
+        self.token_usage_timestamps = []   # محاسبه TPM در ۶۰ ثانیه
+        self.daily_request_timestamps = [] # محاسبه RPD در ۲۴ ساعت
+        self.last_used_time = 0.0          # حداقل فاصله ۱ ثانیه بین درخواست‌ها روی هر کلید
         self.cooldown_until = 0.0
         self.consecutive_failures = 0
 
@@ -674,22 +674,22 @@ class SmartKeyInfo:
             return False
         if self.consecutive_failures >= 5:
             return False
-        # کول‌داون ۱ ثانیه‌ای بین هر درخواست روی این کلید
+        # فاصله ایمن ۱ ثانیه بین درخواست‌های متوالی روی همین کلید
         if now - self.last_used_time < 1.0:
             return False
 
         self.clean_expired(now)
 
-        # بررسی سقف RPM = 30
+        # سقف ۳۰ درخواست در دقیقه
         if len(self.request_timestamps) >= 30:
             return False
 
-        # بررسی سقف TPM = 16K (16,000 توکن)
+        # سقف ۱۶ هزار توکن در دقیقه
         current_tpm = sum(tok for _, tok in self.token_usage_timestamps)
         if current_tpm + estimated_tokens > 16000:
             return False
 
-        # بررسی سقف RPD = 14.4K (14,400 درخواست در ۲۴ ساعت)
+        # سقف ۱۴,۴۰۰ درخواست در شبانه‌روز
         if len(self.daily_request_timestamps) >= 14400:
             return False
 
@@ -712,13 +712,13 @@ class SmartKeyInfo:
     def mark_throttled(self, seconds: float = 60.0):
         self.cooldown_until = time.time() + seconds
         self.consecutive_failures += 1
-        print(f"🛑 [Gemma Key Throttled] Key {self.key[:8]}... cooldown {seconds}s (failures: {self.consecutive_failures})")
+        print(f"🛑 [Google GenAI Key Throttled] Key {self.key[:8]}... cooldown {seconds}s (failures: {self.consecutive_failures})")
 
 
 # ==========================================
-# مدیریت پیشرفته کلیدهای Google GenAI / Gemma 4
+# مدیر جامع کلیدهای Google GenAI (مشترک برای Gemma 4 و Gemini Live)
 # ==========================================
-class GemmaKeyManager:
+class UnifiedGoogleKeyManager:
     def __init__(self):
         self.default_key = "AIzaSyAvyHJC24e5RTrRLlyR4Afq7F0HvP7DXh8"
         self.key_pool: dict[str, SmartKeyInfo] = {self.default_key: SmartKeyInfo(self.default_key)}
@@ -740,20 +740,17 @@ class GemmaKeyManager:
         for k in all_keys:
             new_pool[k] = self.key_pool.get(k, SmartKeyInfo(k))
         self.key_pool = new_pool
-        print(f"🔑 [Gemma Engine] Loaded {len(self.key_pool)} Google GenAI keys. Capacity: {len(self.key_pool) * 30} RPM.")
+        print(f"🔑 [Google GenAI Engine] Loaded {len(self.key_pool)} keys (Capacity: {len(self.key_pool) * 30} RPM for Gemma 4 / Live).")
 
     async def get_client_async(self, estimated_tokens: int = 500, max_wait_timeout: float = 90.0) -> tuple[genai.Client, SmartKeyInfo]:
-        """
-        انتخاب هوشمند کم‌بارترین کلید به صورت ناهمگام.
-        در صورت پر بودن تمامی کلیدها، درخواست به طور نامرئی در صف می‌ماند تا کلیدی آزاد شود.
-        """
+        """متد ناهمگام همراه با صف نامرئی هوشمند مخصوص چت متنی Gemma 4"""
         start_time = time.time()
         while time.time() - start_time < max_wait_timeout:
             now = time.time()
             candidates = [k for k in self.key_pool.values() if k.is_available(estimated_tokens)]
 
             if candidates:
-                # اولویت با کلیدهایی که در این لحظه ۰ پردازش فعال دارند
+                # اولویت اول: کلیدهایی که در این لحظه ۰ پردازش فعال دارند
                 idle_candidates = [k for k in candidates if k.active_requests == 0]
                 pool_to_choose = idle_candidates if idle_candidates else candidates
 
@@ -764,18 +761,16 @@ class GemmaKeyManager:
                 chosen_key_info.acquire(estimated_tokens)
                 return genai.Client(api_key=chosen_key_info.key), chosen_key_info
 
-            # مکث کوتاه بدون بلاک کردن Event Loop
+            # مکث کوتاه بدون قفل کردن پردازش سایر کاربران
             await asyncio.sleep(0.25)
 
-        # در صورت اتمام تایم‌اوت، کلیدی با کمترین پردازش فعال انتخاب می‌شود
+        # انتخاب بهترین کلید در صورت پایان مهلت صف
         fallback_key = min(self.key_pool.values(), key=lambda k: k.active_requests)
         fallback_key.acquire(estimated_tokens)
         return genai.Client(api_key=fallback_key.key), fallback_key
 
     def get_client(self) -> tuple[genai.Client, SmartKeyInfo]:
-        """
-        متد همگام برای سازگاری با وب‌سوکت لایو
-        """
+        """متد همگام مخصوص اتصال فوری وب‌سوکت Gemini Live"""
         now = time.time()
         candidates = [k for k in self.key_pool.values() if now >= k.cooldown_until]
         if not candidates:
@@ -784,55 +779,14 @@ class GemmaKeyManager:
         min_active = min(k.active_requests for k in candidates)
         least_busy = [k for k in candidates if k.active_requests == min_active]
         chosen_key_info = random.choice(least_busy)
-        chosen_key_info.acquire()
+        chosen_key_info.acquire(500)
         return genai.Client(api_key=chosen_key_info.key), chosen_key_info
 
 
-# ساخت نمونه سراسری جهت استفاده در تمام بخش‌های بات و وب‌سوکت
-key_manager = GemmaKeyManager()
-GeminiKeyManager = GemmaKeyManager  # جهت سازگاری با هر ارجاع قدیمی
-
-
-# ==========================================
-# مدیریت کلیدهای Google Gemini (توزیع بار کمترین پردازش + انتخاب تصادفی)
-# ==========================================
-class GeminiKeyManager:
-    def __init__(self):
-        self.default_key = "AIzaSyAvyHJC24e5RTrRLlyR4Afq7F0HvP7DXh8"
-        self.key_pool: dict[str, SmartKeyInfo] = {self.default_key: SmartKeyInfo(self.default_key)}
-
-    @property
-    def active_keys(self) -> list[str]:
-        return list(self.key_pool.keys())
-
-    async def load_keys(self):
-        async with aiosqlite.connect(DB_FILE) as db:
-            async with db.execute(
-                "SELECT key FROM api_keys WHERE status = 'active' AND (provider = 'gemini' OR key LIKE 'AIza%' OR key LIKE 'AQ%')"
-            ) as cursor:
-                rows = await cursor.fetchall()
-                db_keys = [r[0] for r in rows]
-
-        all_keys = list(dict.fromkeys([self.default_key] + db_keys))
-        new_pool = {}
-        for k in all_keys:
-            new_pool[k] = self.key_pool.get(k, SmartKeyInfo(k))
-        self.key_pool = new_pool
-
-    def get_client(self) -> tuple[genai.Client, SmartKeyInfo]:
-        now = time.time()
-        candidates = [k for k in self.key_pool.values() if now >= k.cooldown_until]
-        if not candidates:
-            candidates = list(self.key_pool.values())
-
-        min_active = min(k.active_requests for k in candidates)
-        least_busy = [k for k in candidates if k.active_requests == min_active]
-        chosen_key_info = random.choice(least_busy)
-        chosen_key_info.acquire()
-        return genai.Client(api_key=chosen_key_info.key), chosen_key_info
-
-key_manager = GeminiKeyManager()
-
+# نمونه سراسری و یکپارچه‌سازی نام‌ها جهت جلوگیری از هرگونه تداخل
+key_manager = UnifiedGoogleKeyManager()
+GemmaKeyManager = UnifiedGoogleKeyManager
+GeminiKeyManager = UnifiedGoogleKeyManager
 
 # ==========================================
 # مدیریت کلیدهای Pixazo Music (توزیع بار کمترین پردازش + سمافور داینامیک)
@@ -3307,7 +3261,7 @@ async def save_live_chat_to_db(user_id, role, content):
     await run_floating_memory_cleanup(user_id, engine="gemini")
 
 
-# روت وب‌سوکت برای ایجاد تونل صوتی زنده بین کلاینت و عماد
+# روت وب‌سوکت برای ایجاد تونل صوتی زنده بین کلاینت و عماد لایو
 @web_server.websocket("/ws/live/{slug}")
 async def websocket_live_endpoint(websocket: WebSocket, slug: str):
     await websocket.accept()
@@ -3329,14 +3283,15 @@ async def websocket_live_endpoint(websocket: WebSocket, slug: str):
         return
         
     dynamic_instruction = GEMINI_SYSTEM_INSTRUCTION
+    key_info = None
         
     try:
-        client, key = key_manager.get_client()
+        client, key_info = key_manager.get_client()
     except Exception:
         await websocket.close(code=4001, reason="server_busy")
         return
         
-    # پیکربندی بهینه‌شده به همراه فعال‌سازی صداپیشه‌ی رسمی Charon
+    # پیکربندی صدای رسمی Charon برای مکالمه لایو
     config = genai_types.LiveConnectConfig(
         response_modalities=["AUDIO"],
         system_instruction=genai_types.Content(
@@ -3352,21 +3307,18 @@ async def websocket_live_endpoint(websocket: WebSocket, slug: str):
     )
     
     try:
-        # اتصال به مدل لایو گوگل
+        # اتصال مستقیم به مدل Gemini Live
         async with client.aio.live.connect(model="models/gemini-3.1-flash-live-preview", config=config) as session:
             
-            # تسک ۱: دریافت صدای میکروفون از مرورگر و ارسال به گوگل
+            # دریافت صدای کاربر از مرورگر و ارسال به مدل
             async def client_to_emad():
                 try:
                     while True:
                         try:
                             msg = await websocket.receive()
-                        except RuntimeError:
-                            break
-                        except WebSocketDisconnect:
+                        except (RuntimeError, WebSocketDisconnect):
                             break
                             
-                        # فقط بایت‌های خام صدا استریم می‌شوند
                         if "bytes" in msg and msg["bytes"]:
                             await session.send_realtime_input(
                                 audio=genai_types.Blob(
@@ -3379,14 +3331,13 @@ async def websocket_live_endpoint(websocket: WebSocket, slug: str):
                 except Exception as e:
                     print(f"❌ Error in client_to_emad: {e}")
                     
-            # تسک ۲: دریافت صدای مدل از گوگل و ارسال به مرورگر به همراه ذخیره هوشمند غیرمسدودکننده
+            # دریافت صدای تولیدشده مدل و استریم به کاربر
             async def emad_to_client():
                 accumulated_chunks = []
                 try:
                     while True:
                         turn = session.receive()
                         async for response in turn:
-                            # ۱. بررسی قطع شدن صحبت ربات توسط کاربر (Interrupt)
                             server_content = getattr(response, "server_content", None)
                             if server_content and getattr(server_content, "interrupted", False):
                                 try:
@@ -3394,14 +3345,12 @@ async def websocket_live_endpoint(websocket: WebSocket, slug: str):
                                 except RuntimeError:
                                     pass
 
-                            # ۲. ارسال بایت‌های صوتی به مرورگر
                             if data := getattr(response, 'data', None):
                                 try:
                                     await websocket.send_bytes(data)
                                 except RuntimeError:
                                     break
                             
-                            # ۳. انباشت هوشمند تکه‌های متنی به جای فراخوانی مکرر و سنگین پایگاه‌داده
                             if text := getattr(response, 'text', None):
                                 accumulated_chunks.append(text)
                                 
@@ -3410,7 +3359,6 @@ async def websocket_live_endpoint(websocket: WebSocket, slug: str):
                 except Exception as e:
                     print(f"❌ Error in emad_to_client: {e}")
                 finally:
-                    # ذخیره نهایی کل پاسخ تولید شده به شکل کاملاً یکپارچه و در پس‌زمینه
                     if accumulated_chunks:
                         full_session_text = "".join(accumulated_chunks)
                         asyncio.create_task(save_live_chat_to_db(user_id, 'model', full_session_text))
@@ -3428,11 +3376,13 @@ async def websocket_live_endpoint(websocket: WebSocket, slug: str):
     except Exception as e:
         print(f"❌ Connection exception in live endpoint: {e}")
     finally:
+        if key_info:
+            key_info.release()
         try:
             await websocket.close()
         except Exception:
             pass
-        print(f"🔒 Connection fully closed for slug: {slug}")
+        print(f"🔒 Connection fully closed for live session: {slug}")
 
 @web_server.get("/api/settings/ratelimits")
 async def get_ratelimits_settings(current_user: dict = Depends(get_current_user_by_token)):

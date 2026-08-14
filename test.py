@@ -26,64 +26,6 @@ from google.genai import errors as genai_errors
 from fastapi import WebSocket, WebSocketDisconnect, Query
 from google.genai import types as genai_types
 
-# --- اضافه شدن کتابخانه‌های بخش تولید تصویر ---
-import discord
-from discord.ext import commands
-import aiohttp
-import json
-import os
-import discord.gateway
-
-
-DISCORD_SESSION_FILE = "discord_session_cache.json"
-
-original_from_client = discord.gateway.DiscordWebSocket.from_client
-
-@classmethod
-async def patched_from_client(cls, client, *args, **kwargs):
-    if kwargs.get('initial', True) and os.path.exists(DISCORD_SESSION_FILE):
-        try:
-            with open(DISCORD_SESSION_FILE, 'r') as f:
-                cached = json.load(f)
-            
-            try:
-                os.remove(DISCORD_SESSION_FILE)
-            except:
-                pass
-                
-            session_id = cached.get("session_id")
-            sequence = cached.get("sequence")
-            resume_url = cached.get("resume_gateway_url")
-            
-            if session_id and sequence:
-                print("🔄 [Session Cache] Restoring Discord session...")
-                kwargs['session'] = session_id
-                kwargs['sequence'] = sequence
-                kwargs['resume'] = True
-                kwargs['initial'] = False
-                if resume_url:
-                    kwargs['gateway'] = resume_url
-        except Exception as e:
-            print(f"⚠️ [Session Cache] Cache read error: {e}")
-
-    ws = await original_from_client(client, *args, **kwargs)
-    return ws
-
-# اعمال پچ
-discord.gateway.DiscordWebSocket.from_client = patched_from_client
-
-# ---------------------------------------------
-
-# ==========================================
-# تنظیمات تولید تصویر (دیسکورد و انویدیا)
-# ==========================================
-DISCORD_TOKEN = "MTM1ODQyNDA4MDMyNzM3NzEyOQ.GhbYbv.9d4HrkV63CAp5Enye3VxhQlJwtcfedeLJXKV_4"
-DISCORD_CHANNEL_ID = 1444632560184459326
-MIDJOURNEY_BOT_ID = 936929561302675456
-
-# صف تولید تصویر
-image_generation_queue = asyncio.Queue()
-
 # ==========================================
 # ۱. پیکربندی اولیه و ثابت‌ها (مخصوص ربات اصلی)
 # ==========================================
@@ -92,7 +34,7 @@ API_HASH = "973fdd78128e49a2756ff9a3c2e0cc1a"
 PHONE_NUMBER = "+989333992574"
 #real token = 8960417545:AAHx759WogCOYj3NYZlCTavr29_OST_FGjY
 #test token = 8997540940:AAECj55pKxxpvdlO4oqQ6DSV8oNPy3eJMlk
-BOT_TOKEN = "8960417545:AAHx759WogCOYj3NYZlCTavr29_OST_FGjY"
+BOT_TOKEN = "8997540940:AAECj55pKxxpvdlO4oqQ6DSV8oNPy3eJMlk"
 
 # دامنه تایید شده شما پشت کلادفلر
 WEBAPP_URL = "https://emad.humanv.ir" 
@@ -158,129 +100,11 @@ You operate inside a Telegram bot and help users with everyday conversations, le
 </safety_and_privacy>
 
 <image_generation>
-- You are an elite visual prompt engineer and cinema director specialized in Midjourney V8.2 (Relax Mode). Whenever the user requests to create, draw, paint, design, or imagine any NEW image from scratch, you MUST call `generate_image_fn`.
-
-- AUTOMATIC PROMPT ENHANCEMENT & TRANSLATION:
-  * Translate the user's raw idea from Persian (or any language) into English.
-  * Dramatically enhance it into a rich, detailed, cinematic Midjourney V8.2 prompt.
-  * Structure of the prompt you construct:
-    [Subject with micro-details, textures & materials]
-    + [Atmospheric environment & setting]
-    + [Cinematic lighting: volumetric light, dramatic rim light, golden hour, Rembrandt studio lighting, subsurface scattering]
-    + [Shot composition & optics: shot on 85mm f/1.4 lens, 35mm film still, cinematic color grading, hyperrealistic skin pores, 8k resolution, award-winning photography]
-    + [Aspect Ratio parameter chosen intelligently:
-       - Cinematic/landscape → --ar 16:9 or 2:3
-       - Portrait → --ar 4:5
-       - Vertical/story/mobile → --ar 9:16
-       - Square → --ar 1:1]
-    + [Style & consistency parameters optimized for V8.2 Relax Mode:
-       --s 180 (balanced artistic interpretation with strong prompt adherence)
-       --c 0 (four grid images as consistent as possible)
-       --style raw (minimal auto-beautification, maximum prompt fidelity)
-       --no blurry, deformed, bad anatomy, text, watermark, plastic skin, cartoon]
-    + [Optional: --seed <number> if the user explicitly asks for reproducible results or mentions a specific seed.]
-
-- PARAMETER RULES FOR V8.2 (RELAX MODE, NO VIDEO, CONSISTENT GRID):
-  * ALWAYS use:
-    - Exactly one aspect ratio flag: --ar 16:9 / 2:3 / 4:5 / 9:16 / 1:1 (choose based on user intent).
-    - --s 180 as default stylize for realistic, controlled results (adjust to 120–250 only if the user explicitly requests more/less artistic style).
-    - --c 0 to ensure the 4 images in the grid are as identical as possible.
-    - --style raw for strict prompt adherence and photographic realism.
-    - --no blurry, deformed, bad anatomy, text, watermark, plastic skin, cartoon.
-  * NEVER use:
-    - Any version flags: --v, --version.
-    - --q, --quality, --turbo, --draft.
-    - --cref, --cw, --oref, --ow, --niji.
-    - Multi-prompt syntax (::) or any parameter not documented for V8.2.
-    - --video or any video-related flags.
-  * If the user explicitly requests a different aspect ratio, stylize level, or seed, honor their request while keeping --c 0 and --style raw unless they say otherwise.
-
-- EXAMPLES OF PROMPT ENHANCEMENT:
-  * User: "عکس یک شیر در جنگل"
-    Tool Call Argument: "A majestic male lion with a dense dark mane standing proudly on a mossy cliff in an ancient mist-covered rainforest, soft golden hour sunlight filtering through the dense canopy, volumetric god rays, hyperrealistic fur texture, intense glowing amber eyes, shot on 85mm lens f/1.4, shallow depth of field, National Geographic award-winning documentary photography --ar 16:9 --s 180 --c 0 --style raw --no blurry, deformed, bad anatomy, text, watermark, plastic skin, cartoon"
-  * User: "یک فضانورد در فضا با سبک سایبرپانک"
-    Tool Call Argument: "A cyberpunk astronaut floating in deep space against a glowing neon nebula, high-tech reflective holographic helmet with HUD reflections, detailed mechanical suit with glowing cyan and magenta LED strips, floating stardust particles, cinematic moody lighting, hyper-detailed, octane render, 8k --ar 16:9 --s 180 --c 0 --style raw --no blurry, deformed, bad anatomy, text, watermark, plastic skin, cartoon"
-
-- STRICT RULE: NEVER output version flags like --v 8.2 or any unsupported parameters. The backend engine automatically uses Midjourney V8.2 in Relax Mode.
-
-- DAILY PHOTO LIMIT EXCEEDED: If the tool indicates the daily photo limit is reached, explain this politely in Persian and offer to refine the prompt for later use.
+- When user ask the about image generation from you, say them the team is going to update this abillity and in future get available soon.
 </image_generation>
 
 <image_editing>
-- You are an expert Midjourney V6.1 image-editing prompt engineer and high-end professional retoucher.
-- Whenever the user asks to modify, replace, remove, retouch, recolor, restyle, repair, or alter an EXISTING image, you MUST call `edit_image_fn`.
-
-- CORE PRINCIPLE: THIS IS IMAGE EDITING, NOT NEW IMAGE GENERATION.
-  * Identify the exact area, object, person, clothing, background, facial attribute, text, color, lighting, or visual detail that the user wants changed.
-  * Generate a concise, surgical English editing instruction focused primarily on the requested change.
-  * Do NOT rewrite the entire scene as a new-image prompt unless the user explicitly requests a complete scene or style transformation.
-  * Preserve all unrequested areas: composition, framing, camera angle, pose, body proportions, identity, facial geometry, expression, hairstyle, hands, lighting direction, and background elements unless the user explicitly asks to change them.
-  * The editing backend is expected to target the user-selected/masked region. Your prompt must describe ONLY what should appear in that selected region and how it should blend with the untouched image.
-
-- TRANSLATION AND EDIT-INSTRUCTION RULES:
-  * Translate the user’s request into clear, natural, precise English.
-  * Start with a direct edit action, such as:
-    "replace the selected object with..."
-    "remove the selected element and seamlessly fill the area with..."
-    "change only the selected clothing into..."
-    "restore the selected area with..."
-    "retouch only the selected skin area to..."
-    "replace only the selected background with..."
-    "transform only the selected region into..."
-  * Specify realistic visual integration when relevant:
-    "matching the original perspective, lens distortion, scale, shadows, color temperature, depth of field, grain, and lighting."
-  * Use "keep the rest of the image unchanged" only when useful, but do not over-repeat it.
-  * Never invent changes the user did not request.
-  * Never change a person’s identity, face, ethnicity, age, body shape, pose, or expression unless the user explicitly requests it.
-
-- EDIT SCOPE DETECTION:
-  * LOCAL EDIT: If the user requests a change to one specific element, generate a short, region-focused instruction.
-    Examples: replace a fruit, remove an object, change shirt color, fix a hand, add glasses, replace a logo, alter a small background item.
-  * BACKGROUND EDIT: If the user asks to change the background, preserve the original subject exactly and describe only the new background plus realistic environmental blending.
-  * PORTRAIT RETOUCH: Preserve identity and natural facial geometry. Avoid plastic skin, face reshaping, or identity drift unless explicitly requested.
-  * STYLE CONVERSION: If the user requests an artistic style conversion, preserve the original composition and subject identity while describing the requested medium, palette, texture, brushwork, or rendering method.
-  * FULL TRANSFORMATION: Only when the user explicitly requests a total redesign, describe the requested transformation while retaining any elements the user says must remain unchanged.
-
-- PRECISION AND FIDELITY:
-  * For object replacement, mention the replacement object's exact type, color, material, size, orientation, and interaction with nearby objects when provided by the user.
-  * For background replacement, preserve the subject’s original outline, pose, scale, perspective, edge detail, and lighting consistency.
-  * For clothing edits, preserve the wearer’s face, body proportions, pose, hands, and original camera angle.
-  * For lighting edits, preserve all objects and identity; modify only illumination, shadows, highlights, and color temperature.
-  * For restoration/fixes, repair only the requested defect and preserve surrounding texture and details.
-  * When the user says "just", "only", "فقط", or specifies one object, strictly limit the instruction to that requested area.
-
-- MIDJOURNEY V6.1 PARAMETER POLICY:
-  * Do not add parameters by default.
-  * Use --stylize 50 or --s 50 only for subtle artistic direction when it is genuinely needed.
-  * Use --stylize 100 to 150 only for explicit artistic style conversion requests.
-  * Use --iw only if the backend is performing an Image Prompt workflow and explicitly supports it; for V6.1, valid values are 0 to 3.
-  * Do NOT use --iw as a default replacement for regional masking or inpainting.
-  * Never use --v, --version, --hd, --raw, --style raw, --q, --quality, --cref, --cw, --oref, --ow, --niji, --draft, --turbo, or multi-prompt syntax (::).
-  * Do not include image URLs, attachment IDs, markdown, code fences, or explanations inside the tool prompt argument. The backend injects the input image and Midjourney V6.1 automatically.
-
-- EXAMPLES:
-  * User: "این موز رو تبدیل کن به انبه"
-    Tool Call Argument: "Replace only the selected banana with a ripe golden-yellow mango, natural mango skin texture with subtle speckles, matching the original size, position, perspective, shadows, lighting, and depth of field."
-
-  * User: "فقط تی‌شرتش رو مشکی کن"
-    Tool Call Argument: "Change only the selected T-shirt to solid matte black fabric, preserving the original folds, fit, texture, shadows, pose, body, face, hands, and all other parts of the image."
-
-  * User: "پس‌زمینه رو بکن ساحل هنگام غروب"
-    Tool Call Argument: "Replace only the background with a photorealistic tropical beach at sunset, warm golden-hour sky, soft ocean waves and natural sand, preserving the subject exactly and matching the original perspective, edge detail, rim light, shadows, and color temperature."
-
-  * User: "این لک روی صورت رو حذف کن"
-    Tool Call Argument: "Remove only the selected skin blemish and reconstruct natural surrounding skin texture, preserving the person’s identity, facial geometry, pores, expression, lighting, and all other facial details."
-
-  * User: "لباسش رو تبدیل کن به کت رسمی سرمه‌ای"
-    Tool Call Argument: "Change only the selected clothing into a tailored navy-blue formal suit jacket with realistic wool texture, natural seams and folds, matching the original pose, body proportions, camera angle, lighting, and shadows."
-
-  * User: "این عکس رو نقاشی رنگ روغن کلاسیک کن"
-    Tool Call Argument: "Transform the image into a classical oil painting while preserving the original subject identity, face proportions, composition, pose, and framing; rich layered impasto brushstrokes, visible canvas texture, refined chiaroscuro lighting, museum-quality fine art painting --stylize 125"
-
-- SAFETY AND OUTPUT:
-  * Call `edit_image_fn` directly when an existing image and a clear edit request are present.
-  * If the user’s requested edit target is ambiguous, ask one short Persian clarification question identifying the exact area they want changed.
-  * If the tool reports that the image-editing limit is reached, explain it politely in Persian and offer to prepare the final edit prompt for later use.
+- When user ask the about image generation from you, say them the team is going to update this abillity and in future get available soon.
 </image_editing>
 
 <music_generation>
@@ -1463,258 +1287,6 @@ async def check_user_joined_all(user_id: int) -> list:
             
     return not_joined
 
-class DiscordImageBot(commands.Bot):
-    def __init__(self):
-        super().__init__(command_prefix="!", self_bot=True)
-        self.active_tasks = {}
-        self.semaphore = asyncio.Semaphore(1)  # قفل هم‌روندی واحد برای تمامی درخواست‌های ساخت و ادیت
-        self.waiting_tasks_count = 0            # شمارنده کل صف (مشترک بین ساخت و ادیت)
-        self.saver_task_started = False
-
-    async def _init_semaphore(self):
-        # تغییر به ۱ برای پردازش کاملاً ترتیبی و دستی صف جهت جلوگیری از تداخل عکس‌های کاربران
-        return asyncio.Semaphore(1)
-
-    async def on_ready(self):
-        if self.semaphore is None:
-            self.semaphore = asyncio.Semaphore(1)
-        print(f"🎨 [Discord] Bot ready: {self.user.name}")
-        if not self.saver_task_started:
-            self.loop.create_task(self.session_saver_loop())
-            self.saver_task_started = True
-
-    async def on_resumed(self):
-        print("⚡ [Session Cache] Discord session resumed.")
-
-    async def session_saver_loop(self):
-        await self.wait_until_ready()
-        while not self.is_closed():
-            try:
-                if self.ws and self.ws.session_id and self.ws.sequence:
-                    session_data = {
-                        "session_id": self.ws.session_id,
-                        "sequence": self.ws.sequence,
-                        "resume_gateway_url": getattr(self.ws, "resume_gateway_url", None) or self.ws.gateway
-                    }
-                    await asyncio.to_thread(self._save_session_sync, session_data)
-            except Exception:
-                pass
-            await asyncio.sleep(5)
-
-    def _save_session_sync(self, data):
-        with open(DISCORD_SESSION_FILE, "w") as f:
-            json.dump(data, f)
-
-    async def close(self):
-        try:
-            if self.ws and self.ws.session_id and self.ws.sequence:
-                session_data = {
-                    "session_id": self.ws.session_id,
-                    "sequence": self.ws.sequence,
-                    "resume_gateway_url": getattr(self.ws, "resume_gateway_url", None) or self.ws.gateway
-                }
-                await asyncio.to_thread(self._save_session_sync, session_data)
-                print("💾 [Session Cache] Session saved.")
-        except Exception as e:
-            print(f"⚠️ [Session Cache] Save failed: {e}")
-        await super().close()
-
-    async def recover_pending_tasks(self):
-        await self.wait_until_ready()
-        print("🔄 [Recovery] Checking pending tasks...")
-        
-        async with aiosqlite.connect(DB_FILE) as db:
-            async with db.execute("SELECT task_id, chat_id, user_id, target_msg_id, prompt, is_group FROM pending_image_tasks") as cursor:
-                rows = await cursor.fetchall()
-                
-        if not rows:
-            print("✅ [Recovery] No pending tasks.")
-            return
-            
-        print(f"📦 [Recovery] Loaded {len(rows)} pending tasks.")
-        
-        for r in rows:
-            task_id, chat_id, user_id, target_msg_id, prompt, is_group = r
-            if task_id not in self.active_tasks:
-                future = asyncio.Future()
-                self.active_tasks[task_id] = {
-                    'prompt': prompt,
-                    'future': future,
-                    'chat_id': chat_id,
-                    'user_id': user_id,
-                    'recovered': True
-                }
-                asyncio.create_task(self.await_recovered_task(task_id, chat_id, user_id, target_msg_id, prompt, is_group, future))
-
-        try:
-            channel = self.get_channel(DISCORD_CHANNEL_ID)
-            if channel:
-                print("🔍 [Recovery] Scanning channel history...")
-                async for message in channel.history(limit=50):
-                    await self.on_message(message)
-        except Exception as e:
-            print(f"⚠️ [Recovery] History scan failed: {e}")
-
-    async def await_recovered_task(self, task_id, chat_id, user_id, target_msg_id, prompt, is_group, future):
-        try:
-            print("⏳ [Recovery] Waiting for resolution...")
-            img_url = await asyncio.wait_for(future, timeout=300.0)
-            
-            filename = f"{TEMP_DIR}/emad_gen_{user_id}_{int(time.time())}.png"
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-            }
-            async with aiohttp.ClientSession() as session:
-                async with session.get(img_url, headers=headers) as resp:
-                    if resp.status == 200:
-                        file_data = await resp.read()
-                        await async_write_file(filename, file_data)
-                    else:
-                        raise Exception("خطا در دانلود")
-
-            caption = f"🎨 **تصویر شما آماده شد! (بازیابی شده)**"
-            await bot.send_file(chat_id, filename, caption=caption, reply_to=target_msg_id, has_spoiler=True)
-            
-            if is_group:
-                try:
-                    await bot.send_file(user_id, filename, caption=f"گروه: تصویر درخواست شده شما آماده شد 👆\n\n", has_spoiler=True)
-                except:
-                    pass
-
-            await async_remove_file(filename)
-
-        except asyncio.TimeoutError:
-            print("⚠️ [Recovery] Task timed out.")
-        except Exception as e:
-            print(f"❌ [Recovery] Process error: {e}")
-        finally:
-            self.active_tasks.pop(task_id, None)
-            async with aiosqlite.connect(DB_FILE) as db:
-                await db.execute("DELETE FROM pending_image_tasks WHERE task_id = ?", (task_id,))
-                await db.commit()
-
-    async def on_message(self, message: discord.Message):
-        if message.author.id != MIDJOURNEY_BOT_ID:
-            return
-
-        content_lower = message.content.lower()
-        matched_task_id = None
-        for task_id in list(self.active_tasks.keys()):
-            if task_id in content_lower:
-                matched_task_id = task_id
-                break
-
-        if not matched_task_id:
-            return
-
-        task = self.active_tasks[matched_task_id]
-
-        if "banned prompt" in content_lower or "community guidelines" in content_lower:
-            print("🚨 [Discord] Banned Prompt Detected.")
-            if not task['future'].done():
-                task['future'].set_exception(ValueError("BannedPrompt"))
-            self.active_tasks.pop(matched_task_id, None)
-            return
-
-        if "- Image #" not in message.content and message.components:
-            u4_button = None
-            for row in message.components:
-                for child in row.children:
-                    if child.label == "U4":
-                        u4_button = child
-                        break
-                if u4_button:
-                    break
-
-            if u4_button:
-                try:
-                    print("🔄 [Discord] Grid ready. Clicking U4...")
-                    await u4_button.click()
-                except Exception as e:
-                    if not task['future'].done():
-                        task['future'].set_exception(e)
-                    self.active_tasks.pop(matched_task_id, None)
-
-        elif "- Image #4" in message.content or "- Image #" in message.content:
-            if message.attachments:
-                img_url = message.attachments[0].url
-                print("✅ [Discord] Final image received.")
-                if not task['future'].done():
-                    task['future'].set_result(img_url)
-                self.active_tasks.pop(matched_task_id, None)
-
-# نمونه‌سازی مجدد از ربات دیسکورد
-discord_bot = DiscordImageBot()
-
-async def image_queue_worker():
-    """تسک پس‌زمینه برای پردازش یکی‌یکی عکس‌ها از صف"""
-    await discord_bot.wait_until_ready()
-    
-    while True:
-        task_data = await image_generation_queue.get()
-        chat_id, user_id, target_msg, raw_prompt, is_group = task_data
-        
-        try:
-            # 1. اعلام شروع پردازش به کاربر
-            status_msg = await bot.send_message(chat_id, "⚙️ پرامپت شما در حال بهینه‌سازی و تولید تصویر است. لطفاً کمی منتظر بمانید...", reply_to=target_msg.id)
-            
-            # 2. بهینه‌سازی پرامپت با GLM-5.2
-            enhanced_prompt = await enhance_prompt_for_image(raw_prompt)
-            print(f"[Image Task] Enhanced Prompt: {enhanced_prompt}")
-
-            # 3. ارسال به دیسکورد و انتظار
-            future = asyncio.Future()
-            discord_bot.active_task = {'prompt': enhanced_prompt, 'future': future}
-            
-            channel = discord_bot.get_channel(DISCORD_CHANNEL_ID)
-            cmds = await channel.application_commands()
-            mj_cmd = next((c for c in cmds if c.name == "imagine" and c.application_id == MIDJOURNEY_BOT_ID), None)
-            
-            if not mj_cmd:
-                raise Exception("دستور /imagine emad-1 یافت نشد!")
-
-            await mj_cmd(channel=channel, prompt=enhanced_prompt)
-            
-            # تایم‌اوت 5 دقیقه‌ای برای جلوگیری از گیر کردن صف
-            img_url = await asyncio.wait_for(future, timeout=300.0)
-            
-            # 4. دانلود تصویر با User-Agent
-            filename = f"{TEMP_DIR}/emad_gen_{user_id}_{int(time.time())}.png"
-            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
-            async with aiohttp.ClientSession() as session:
-                async with session.get(img_url, headers=headers) as resp:
-                    if resp.status == 200:
-                        with open(filename, "wb") as f:
-                            f.write(await resp.read())
-                    else:
-                        raise Exception("خطا در دانلود از سرور دیسکورد")
-
-            # 5. ارسال تصویر به کاربر بصورت اسپویلر
-            caption = f"🎨 **تصویر شما آماده شد!**"
-            
-            await bot.delete_messages(chat_id, status_msg)
-            
-            # ارسال در چت اصلی (اسپویلر فعال است)
-            await bot.send_file(chat_id, filename, caption=caption, reply_to=target_msg.id, has_spoiler=True)
-            
-            # اگر در گروه بود، یک نسخه هم به پیوی کاربر بفرست
-            if is_group:
-                try:
-                    await bot.send_file(user_id, filename, caption=f"گروه: تصویر درخواست شده شما آماده شد 👆\n\n", has_spoiler=True)
-                except:
-                    pass # اگر ربات را در پیوی استارت نکرده باشد مشکلی پیش نیاید
-
-            # 6. حذف فایل از سرور (جهت جلوگیری از پر شدن هارد)
-            if os.path.exists(filename):
-                os.remove(filename)
-
-        except asyncio.TimeoutError:
-            await bot.send_message(chat_id, "❌ زمان تولید تصویر به پایان رسید (تایم‌اوت سرور). مجدداً تلاش کنید.", reply_to=target_msg.id)
-        except Exception as e:
-            await bot.send_message(chat_id, f"❌ متاسفانه در تولید تصویر مشکلی رخ داد: {e}", reply_to=target_msg.id)
-        finally:
-            discord_bot.active_task = None
-            image_generation_queue.task_done()
 
 # ==========================================
 # تعریف ابزار هوشمند تولید عکس و خط لوله یکپارچه
@@ -1767,115 +1339,6 @@ def inject_task_id_to_prompt(prompt: str, task_id: str) -> str:
     else:
         return f"{prompt.strip()} {task_id}"
 
-
-async def process_image_task(chat_id, user_id, target_msg, raw_prompt, is_group, remaining_imgs=0, total_imgs=10):
-    status_msg = None
-    if discord_bot.semaphore.locked():
-        discord_bot.waiting_tasks_count += 1
-        queue_pos = discord_bot.waiting_tasks_count
-        status_msg = await bot.send_message(chat_id, f"⏳ **درخواست تصویر شما در صف قرار گرفت.**\nنوبت شما: {queue_pos}", reply_to=target_msg.id)
-    else:
-        status_msg = await bot.send_message(chat_id, "⚙️ درخواست تایید شد. در حال طراحی و تولید تصویر...", reply_to=target_msg.id)
-
-    task_id = f"emadid_{secrets.token_hex(4)}"
-    group_id = chat_id if is_group else None
-
-    try:
-        async with discord_bot.semaphore:
-            if status_msg and "صف" in status_msg.message:
-                discord_bot.waiting_tasks_count = max(0, discord_bot.waiting_tasks_count - 1)
-                try:
-                    await bot.edit_message(chat_id, status_msg, "⚙️ نوبت شما رسید! در حال تولید تصویر...")
-                except:
-                    pass
-
-            clean_prompt = re.sub(r'--v\s+[0-9.]+', '', raw_prompt, flags=re.IGNORECASE).strip()
-            final_prompt_with_id = inject_task_id_to_prompt(f"{clean_prompt} --v 8.2", task_id)
-
-            async with aiosqlite.connect(DB_FILE) as db:
-                await db.execute("""
-                    INSERT OR REPLACE INTO pending_image_tasks (task_id, chat_id, user_id, target_msg_id, prompt, is_group, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, (task_id, chat_id, user_id, target_msg.id, final_prompt_with_id, 1 if is_group else 0, datetime.now().isoformat()))
-                await db.commit()
-
-            future = asyncio.Future()
-            discord_bot.active_tasks[task_id] = {'prompt': final_prompt_with_id, 'future': future, 'chat_id': chat_id, 'user_id': user_id}
-
-            channel = discord_bot.get_channel(DISCORD_CHANNEL_ID)
-            if not channel:
-                raise Exception("کانال دیسکورد در دسترس نیست.")
-
-            cmds = await channel.application_commands()
-            mj_cmd = next((c for c in cmds if c.name == "imagine" and c.application_id == MIDJOURNEY_BOT_ID), None)
-            if not mj_cmd:
-                raise Exception("دستور /imagine یافت نشد.")
-
-            await mj_cmd(channel=channel, prompt=final_prompt_with_id)
-            img_url = await asyncio.wait_for(future, timeout=300.0)
-
-            gen_filename = f"{TEMP_DIR}/emad_gen_{user_id}_{int(time.time())}.png"
-            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36'}
-            async with aiohttp.ClientSession() as session:
-                async with session.get(img_url, headers=headers) as resp:
-                    if resp.status == 200:
-                        file_data = await resp.read()
-                        await async_write_file(gen_filename, file_data)
-                    else:
-                        raise Exception(f"خطا در دانلود تصویر نهایی (HTTP {resp.status})")
-
-            caption = f"🎨 **تصویر شما آماده شد!**\n🖼 **سهمیه باقی‌مانده امروز شما:** {remaining_imgs} از {total_imgs}"
-
-            if status_msg:
-                try:
-                    await bot.delete_messages(chat_id, status_msg)
-                    status_msg = None
-                except:
-                    pass
-
-            await bot.send_file(chat_id, gen_filename, caption=caption, reply_to=target_msg.id, has_spoiler=True)
-
-            if is_group:
-                try:
-                    await bot.send_file(user_id, gen_filename, caption=f"گروه: تصویر درخواست شده شما آماده شد 👆\n🖼 باقی‌مانده امروز: {remaining_imgs} از {total_imgs}", has_spoiler=True)
-                except:
-                    pass
-
-            # ✅ ذخیره در Chat History یکپارچه
-            now_str = datetime.now().isoformat()
-            user_prompt_text = f"[درخواست تولید تصویر] {raw_prompt}"
-            model_response_text = f"[تصویر تولید شد ✅] پرامپت: {clean_prompt[:300]}"
-            est_in = estimate_tokens(user_prompt_text)
-            est_out = estimate_tokens(model_response_text)
-
-            async with aiosqlite.connect(DB_FILE) as db:
-                await db.execute("INSERT INTO chats (user_id, group_id, topic_id, role, content, tokens, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    (user_id, group_id, None, 'user', user_prompt_text, est_in, now_str))
-                await db.execute("INSERT INTO chats (user_id, group_id, topic_id, role, content, tokens, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    (user_id, group_id, None, 'model', model_response_text, est_out, now_str))
-                await db.commit()
-
-            await async_remove_file(gen_filename)
-
-    except Exception as e:
-        discord_bot.active_tasks.pop(task_id, None)
-        await report_error_to_admin("Image Generation (emad-1)", e, user_id=user_id, chat_id=chat_id, extra_info=f"Prompt: {raw_prompt}")
-        try:
-            if status_msg:
-                await bot.edit_message(chat_id, status_msg, "❌ متاسفانه در تولید تصویر مشکلی رخ داد. لطفاً چند لحظه بعد مجدداً تلاش کنید.")
-            else:
-                await bot.send_message(chat_id, "❌ متاسفانه در تولید تصویر مشکلی رخ داد. لطفاً چند لحظه بعد مجدداً تلاش کنید.", reply_to=target_msg.id)
-        except:
-            pass
-    finally:
-        await release_user_gen_lock(user_id)
-        try:
-            async with aiosqlite.connect(DB_FILE) as db:
-                await db.execute("DELETE FROM pending_image_tasks WHERE task_id = ?", (task_id,))
-                await db.commit()
-        except Exception:
-            pass
-
 # ==========================================
 # مدیریت قفل تک‌درخواستی کاربر (عکس / ادیت / موزیک)
 # ==========================================
@@ -1899,30 +1362,33 @@ async def release_user_gen_lock(user_id: int):
     key = f"active_gen:{user_id}"
     await redis_manager.delete(key)
 
+# ==========================================
+# پایپ‌لاین‌های موقت تولید و ادیت تصویر (غیرفعال تا اتصال مدل جدید)
+# ==========================================
 async def trigger_image_generation_pipeline(chat_id, user_id, target_msg, prompt, is_group) -> bool:
-    # ۱. بررسی قفل هم‌روندی تک‌درخواستی کاربر
-    if not await acquire_user_gen_lock(user_id):
+    """پاسخ موقت سیستم هنگام فراخوانی ابزار ساخت عکس"""
+    try:
         await bot.send_message(
             chat_id,
-            "⚠️ **درخواست همزمان غیرمجاز!**\nشما در حال حاضر یک پردازش فعال (تولید عکس / ادیت عکس / ساخت موزیک) در حال انجام دارید. لطفاً تا اتمام آن صبور باشید.",
+            "🎨 **قابلیت تولید تصویر در حال حاضر به دلیل ارتقای زیرساخت و مهاجرت به مدل جدید موقتاً غیرفعال است.**\n\n⚙️ به زودی با کیفیت و سرعت بسیار بالاتر در دسترس شما قرار خواهد گرفت.",
             reply_to=target_msg.id
         )
-        return False
-
-    # ۲. بررسی سهمیه روزانه
-    allowed, remaining, total_limit = await check_and_consume_image_limit(user_id)
-    if not allowed:
-        await release_user_gen_lock(user_id)  # آزادسازی قفل در صورت عدم وجود سهمیه
-        await bot.send_message(
-            chat_id, 
-            f"❌ **محدودیت تولید تصویر!**\nسقف مجاز شما ({total_limit} عکس در روز) به اتمام رسیده است. سهمیه شما ۲۴ ساعت دیگر شارژ می‌شود.", 
-            reply_to=target_msg.id
-        )
-        return False
-
-    asyncio.create_task(process_image_task(chat_id, user_id, target_msg, prompt, is_group, remaining, total_limit))
+    except Exception as e:
+        print(f"⚠️ Error sending maintenance notice: {e}")
     return True
 
+
+async def trigger_image_edit_pipeline(chat_id, user_id, target_msg, prompt, is_group, photo_msg=None) -> bool:
+    """پاسخ موقت سیستم هنگام فراخوانی ابزار ویرایش عکس"""
+    try:
+        await bot.send_message(
+            chat_id,
+            "✏️ **قابلیت ویرایش و روتوش تصویر در حال ارتقا و بهینه‌سازی است.**\n\n⚙️ این بخش به زودی فعال خواهد شد.",
+            reply_to=target_msg.id
+        )
+    except Exception as e:
+        print(f"⚠️ Error sending maintenance notice: {e}")
+    return True
 
 # ==========================================
 # تعریف اسکیما ابزارها مخصوص موتور Google Gemini
@@ -1999,134 +1465,6 @@ GEMINI_TOOLS = [
         ]
     )
 ]
-
-async def upload_image_to_discord(file_path: str) -> str:
-    """آپلود عکس تلگرام کاربر به کانال دیسکورد جهت دریافت لینک CDN مستقیم"""
-    channel = discord_bot.get_channel(DISCORD_CHANNEL_ID)
-    if not channel:
-        raise Exception("کانال دیسکورد یافت نشد.")
-    
-    discord_file = discord.File(file_path)
-    msg = await channel.send(file=discord_file)
-    if msg.attachments:
-        return msg.attachments[0].url
-    raise Exception("خطا در دریافت لینک CDN تصویر از دیسکورد.")
-
-async def process_image_edit_task(chat_id, user_id, target_msg, raw_prompt, is_group, photo_msg, remaining_imgs=0, total_imgs=10):
-    user_photo_path = None
-    gen_filename = None
-    status_msg = None
-    task_id = f"emaded_{secrets.token_hex(4)}"
-    group_id = chat_id if is_group else None
-
-    if discord_bot.semaphore.locked():
-        discord_bot.waiting_tasks_count += 1
-        queue_pos = discord_bot.waiting_tasks_count
-        status_msg = await bot.send_message(chat_id, f"⏳ **درخواست ویرایش تصویر شما در صف قرار گرفت.**\nنوبت شما: {queue_pos}", reply_to=target_msg.id)
-    else:
-        status_msg = await bot.send_message(chat_id, "⚙️ درخواست ویرایش تصویر تایید شد. در حال پردازش...", reply_to=target_msg.id)
-
-    try:
-        async with discord_bot.semaphore:
-            if status_msg and "صف" in status_msg.message:
-                discord_bot.waiting_tasks_count = max(0, discord_bot.waiting_tasks_count - 1)
-                try:
-                    await bot.edit_message(chat_id, status_msg, "⚙️ نوبت شما رسید! در حال اعمال تغییرات روی تصویر...")
-                except:
-                    pass
-
-            user_photo_path = await bot.download_media(photo_msg, file=TEMP_DIR)
-            if not user_photo_path or not os.path.exists(user_photo_path):
-                raise Exception("تصویر مبدا از تلگرام دریافت نشد.")
-
-            discord_cdn_url = await upload_image_to_discord(user_photo_path)
-            await async_remove_file(user_photo_path)
-            user_photo_path = None
-
-            clean_prompt = re.sub(r'--v\s+[0-9.]+', '', raw_prompt, flags=re.IGNORECASE).strip()
-            clean_prompt = re.sub(r'--hd\b', '', clean_prompt, flags=re.IGNORECASE).strip()
-            enhanced_prompt = f"{discord_cdn_url} {clean_prompt} --v 6.1"
-            final_prompt_with_id = inject_task_id_to_prompt(enhanced_prompt, task_id)
-
-            async with aiosqlite.connect(DB_FILE) as db:
-                await db.execute("""
-                    INSERT OR REPLACE INTO pending_image_tasks (task_id, chat_id, user_id, target_msg_id, prompt, is_group, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, (task_id, chat_id, user_id, target_msg.id, final_prompt_with_id, 1 if is_group else 0, datetime.now().isoformat()))
-                await db.commit()
-
-            future = asyncio.Future()
-            discord_bot.active_tasks[task_id] = {'prompt': final_prompt_with_id, 'future': future, 'chat_id': chat_id, 'user_id': user_id}
-
-            channel = discord_bot.get_channel(DISCORD_CHANNEL_ID)
-            if not channel:
-                raise Exception("کانال دیسکورد در دسترس نیست.")
-
-            cmds = await channel.application_commands()
-            mj_cmd = next((c for c in cmds if c.name == "imagine" and c.application_id == MIDJOURNEY_BOT_ID), None)
-            if not mj_cmd:
-                raise Exception("دستور ویرایش یافت نشد.")
-
-            await mj_cmd(channel=channel, prompt=final_prompt_with_id)
-            img_url = await asyncio.wait_for(future, timeout=300.0)
-
-            gen_filename = f"{TEMP_DIR}/emad_edit_{user_id}_{int(time.time())}.png"
-            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36'}
-            async with aiohttp.ClientSession() as session:
-                async with session.get(img_url, headers=headers) as resp:
-                    if resp.status == 200:
-                        file_data = await resp.read()
-                        await async_write_file(gen_filename, file_data)
-                    else:
-                        raise Exception("خطا در دریافت فایل تصویر ویرایش‌شده")
-
-            caption = f"✏️ **تصویر ویرایش‌شده شما آماده شد!**\n🖼 **سهمیه باقی‌مانده امروز شما:** {remaining_imgs} از {total_imgs}"
-
-            if status_msg:
-                try:
-                    await bot.delete_messages(chat_id, status_msg)
-                    status_msg = None
-                except:
-                    pass
-
-            await bot.send_file(chat_id, gen_filename, caption=caption, reply_to=target_msg.id, has_spoiler=True)
-
-            # ✅ ذخیره در Chat History
-            now_str = datetime.now().isoformat()
-            user_prompt_text = f"[درخواست ویرایش تصویر] {raw_prompt}"
-            model_response_text = f"[تصویر ویرایش شد ✅] دستور: {clean_prompt[:300]}"
-            est_in = estimate_tokens(user_prompt_text)
-            est_out = estimate_tokens(model_response_text)
-
-            async with aiosqlite.connect(DB_FILE) as db:
-                await db.execute("INSERT INTO chats (user_id, group_id, topic_id, role, content, tokens, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    (user_id, group_id, None, 'user', user_prompt_text, est_in, now_str))
-                await db.execute("INSERT INTO chats (user_id, group_id, topic_id, role, content, tokens, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    (user_id, group_id, None, 'model', model_response_text, est_out, now_str))
-                await db.commit()
-
-    except Exception as e:
-        discord_bot.active_tasks.pop(task_id, None)
-        await report_error_to_admin("Image Edit Engine", e, user_id=user_id, chat_id=chat_id, extra_info=f"Prompt: {raw_prompt}")
-        try:
-            if status_msg:
-                await bot.edit_message(chat_id, status_msg, "❌ متاسفانه در ویرایش تصویر مشکلی رخ داد. لطفاً مجدداً تلاش کنید.")
-            else:
-                await bot.send_message(chat_id, "❌ متاسفانه در ویرایش تصویر مشکلی رخ داد. لطفاً مجدداً تلاش کنید.", reply_to=target_msg.id)
-        except:
-            pass
-    finally:
-        await release_user_gen_lock(user_id)
-        if user_photo_path and os.path.exists(user_photo_path):
-            await async_remove_file(user_photo_path)
-        if gen_filename and os.path.exists(gen_filename):
-            await async_remove_file(gen_filename)
-        try:
-            async with aiosqlite.connect(DB_FILE) as db:
-                await db.execute("DELETE FROM pending_image_tasks WHERE task_id = ?", (task_id,))
-                await db.commit()
-        except Exception:
-            pass
 
 async def trigger_image_edit_pipeline(chat_id, user_id, target_msg, prompt, is_group, photo_msg) -> bool:
     if not photo_msg or not getattr(photo_msg, 'photo', None):
@@ -4122,20 +3460,17 @@ async def api_sponsor_stats(current_user: dict = Depends(get_current_user_by_tok
     }
 
 # ==========================================
-# ۱۱. استارت و هماهنگ‌سازی همزمان
+# استارت و هماهنگ‌سازی سیستم
 # ==========================================
 async def main():
     await init_db()
-    await settings_manager.load()
+    await settings_manager.load()          # بارگذاری ریت‌لیمیت‌های پویا
     await key_manager.load_keys()          # بارگذاری کلیدهای Gemma-4
     await music_key_manager.load_keys()    # بارگذاری کلیدهای موزیک
     await bot.start(bot_token=BOT_TOKEN)
-    print("🤖 ربات تلگرام عماد با مدل پیشرفته Gemma 4 (31B) روشن شد.")
+    print("🤖 ربات تلگرام عماد با مدل هوشمند Gemma 4 (31B) با موفقیت روشن شد.")
 
-    asyncio.create_task(discord_bot.start(DISCORD_TOKEN))
-    asyncio.create_task(discord_bot.recover_pending_tasks())
-
-    config = uvicorn.Config(web_server, host="0.0.0.0", port=PORT, loop="asyncio")
+    config = uvicorn.Config(web_server, host="0.0.0.0", port=8011, loop="asyncio")
     server = uvicorn.Server(config)
     await server.serve()
 

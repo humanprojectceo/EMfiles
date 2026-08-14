@@ -649,7 +649,8 @@ async def clear_redis_limits_once():
 
 
 # ==========================================
-# مدیریت پیشرفته کلیدهای هوشمند Gemma-4 (RPM: 30, TPM: 16K, RPD: 14.4K)
+# کلاس پایه کلید هوشمند با ردیابی بار پردازشی و محدودیت نرخ
+# (RPM: 30, TPM: 16K, RPD: 14.4K, Cooldown: 1s)
 # ==========================================
 class SmartKeyInfo:
     def __init__(self, key: str):
@@ -658,7 +659,7 @@ class SmartKeyInfo:
         self.request_timestamps = []       # RPM (در ۶۰ ثانیه اخیر)
         self.token_usage_timestamps = []   # TPM (در ۶۰ ثانیه اخیر)
         self.daily_request_timestamps = [] # RPD (در ۲۴ ساعت اخیر)
-        self.last_used_time = 0.0          # فاصله حداقل ۱ ثانیه بین درخواست‌ها
+        self.last_used_time = 0.0          # فاصله حداقل ۱ ثانیه بین درخواست‌ها روی این کلید
         self.cooldown_until = 0.0
         self.consecutive_failures = 0
 
@@ -714,6 +715,9 @@ class SmartKeyInfo:
         print(f"🛑 [Gemma Key Throttled] Key {self.key[:8]}... cooldown {seconds}s (failures: {self.consecutive_failures})")
 
 
+# ==========================================
+# مدیریت پیشرفته کلیدهای Google GenAI / Gemma 4
+# ==========================================
 class GemmaKeyManager:
     def __init__(self):
         self.default_key = "AIzaSyAvyHJC24e5RTrRLlyR4Afq7F0HvP7DXh8"
@@ -740,8 +744,8 @@ class GemmaKeyManager:
 
     async def get_client_async(self, estimated_tokens: int = 500, max_wait_timeout: float = 90.0) -> tuple[genai.Client, SmartKeyInfo]:
         """
-        انتخاب هوشمند کم‌بارترین کلید. در صورت مشغول بودن تمام کلیدها، درخواست 
-        بدون نمایش هیچ اروری به کاربر وارد یک صف انتظار نامرئی و روان می‌شود.
+        انتخاب هوشمند کم‌بارترین کلید به صورت ناهمگام.
+        در صورت پر بودن تمامی کلیدها، درخواست به طور نامرئی در صف می‌ماند تا کلیدی آزاد شود.
         """
         start_time = time.time()
         while time.time() - start_time < max_wait_timeout:
@@ -749,11 +753,10 @@ class GemmaKeyManager:
             candidates = [k for k in self.key_pool.values() if k.is_available(estimated_tokens)]
 
             if candidates:
-                # اولویت ۱: کلیدهایی که در همین لحظه ۰ پردازش فعال دارند
+                # اولویت با کلیدهایی که در این لحظه ۰ پردازش فعال دارند
                 idle_candidates = [k for k in candidates if k.active_requests == 0]
                 pool_to_choose = idle_candidates if idle_candidates else candidates
 
-                # اولویت ۲: کمترین اتصالات فعال (Least Connections)
                 min_active = min(k.active_requests for k in pool_to_choose)
                 least_busy = [k for k in pool_to_choose if k.active_requests == min_active]
 
@@ -761,17 +764,33 @@ class GemmaKeyManager:
                 chosen_key_info.acquire(estimated_tokens)
                 return genai.Client(api_key=chosen_key_info.key), chosen_key_info
 
-            # اگر تمام کلیدها پر یا در کول‌داون ۱ ثانیه‌ای بودند، استراحت کوتاه نامحسوس
+            # مکث کوتاه بدون بلاک کردن Event Loop
             await asyncio.sleep(0.25)
 
-        # اگر بعد از تایم‌اوت کلیدی پیدا نشد، کلیدی که کمترین کول‌داون را دارد با اجبار انتخاب کن
+        # در صورت اتمام تایم‌اوت، کلیدی با کمترین پردازش فعال انتخاب می‌شود
         fallback_key = min(self.key_pool.values(), key=lambda k: k.active_requests)
         fallback_key.acquire(estimated_tokens)
         return genai.Client(api_key=fallback_key.key), fallback_key
 
+    def get_client(self) -> tuple[genai.Client, SmartKeyInfo]:
+        """
+        متد همگام برای سازگاری با وب‌سوکت لایو
+        """
+        now = time.time()
+        candidates = [k for k in self.key_pool.values() if now >= k.cooldown_until]
+        if not candidates:
+            candidates = list(self.key_pool.values())
 
-# جایگزین مدیر کلید قبلی
+        min_active = min(k.active_requests for k in candidates)
+        least_busy = [k for k in candidates if k.active_requests == min_active]
+        chosen_key_info = random.choice(least_busy)
+        chosen_key_info.acquire()
+        return genai.Client(api_key=chosen_key_info.key), chosen_key_info
+
+
+# ساخت نمونه سراسری جهت استفاده در تمام بخش‌های بات و وب‌سوکت
 key_manager = GemmaKeyManager()
+GeminiKeyManager = GemmaKeyManager  # جهت سازگاری با هر ارجاع قدیمی
 
 
 # ==========================================

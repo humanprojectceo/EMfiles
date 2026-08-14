@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>داشبورد مدیریت هوشمند | عماد AI</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Vazirmatn Font CDN -->
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        * { font-family: 'Vazirmatn', system-ui, sans-serif; }
+        
+        body { 
+            background: #060913; 
+            color: #f1f5f9; 
+            background-image: 
+                radial-gradient(circle at 10% 10%, rgba(56, 189, 248, 0.08) 0%, transparent 45%),
+                radial-gradient(circle at 90% 90%, rgba(168, 85, 247, 0.08) 0%, transparent 45%),
+                radial-gradient(circle at 50% 20%, rgba(20, 184, 166, 0.05) 0%, transparent 50%),
+                linear-gradient(180deg, #0b1120 0%, #060913 100%);
+            min-height: 100vh;
+        }
+
+        .tg-card { 
+            background: rgba(15, 23, 42, 0.65); 
+            backdrop-filter: blur(28px); 
+            -webkit-backdrop-filter: blur(28px);
+            border: 1px solid rgba(255, 255, 255, 0.08); 
+            box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.5);
+            transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .tg-card:hover { 
+            border-color: rgba(56, 189, 248, 0.3);
+            box-shadow: 0 20px 48px -8px rgba(2, 132, 199, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .tg-input {
+            background: rgba(8, 14, 26, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.09);
+            transition: all 0.2s ease;
+        }
+        .tg-input:focus { 
+            border-color: #38bdf8; 
+            background: rgba(11, 18, 33, 0.95);
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.22); 
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.15); }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        .tab-btn {
+            position: relative;
+            transition: all 0.25s ease;
+        }
+        .tab-active { 
+            color: #38bdf8 !important; 
+            background: linear-gradient(180deg, rgba(56, 189, 248, 0.12) 0%, rgba(56, 189, 248, 0.01) 100%);
+            border-bottom: 2px solid #38bdf8;
+        }
+
+        .pulse-dot { animation: pulse-anim 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse-anim {
+            0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.7); }
+            50% { opacity: 0.8; transform: scale(1.05); box-shadow: 0 0 0 8px rgba(56, 189, 248, 0); }
+        }
+
+        .btn-primary { 
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); 
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
+        }
+        .btn-primary:hover { 
+            transform: translateY(-1px); 
+            box-shadow: 0 8px 24px rgba(2, 132, 199, 0.45); 
+            filter: brightness(1.1);
+        }
+
+        .fade-in { animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes fadeIn { 
+            from { opacity: 0; transform: translateY(10px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+
+        .md-content b, .md-content strong { font-weight: bold; color: #ffffff; }
+        .md-content i, .md-content em { font-style: italic; color: #cbd5e1; }
+        .md-content code { background: #0f172a; padding: 2px 6px; border-radius: 6px; font-family: monospace; color: #38bdf8; font-size: 11px; }
+        .md-content pre { background: #020617; padding: 12px; border-radius: 12px; border: 1px solid #1e293b; overflow-x: auto; margin: 6px 0; }
+        .md-content pre code { background: none; padding: 0; color: #f8fafc; font-size: 11px; }
+    </style>
+</head>
+<body class="p-3 sm:p-6 md:p-8 selection:bg-sky-500 selection:text-white">
+    <div class="max-w-7xl mx-auto space-y-6">
+
+        <!-- ========================================== -->
+        <!-- هدر داشبورد هوشمند -->
+        <!-- ========================================== -->
+        <header class="tg-card p-5 sm:p-6 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-5 border border-sky-500/20">
+            <div class="flex items-center gap-4 w-full sm:w-auto">
+                <div class="relative shrink-0">
+                    <img src="/api/profile_pic/{{user_id}}" class="w-16 h-16 rounded-2xl border-2 border-sky-500/60 shadow-xl object-cover" alt="Profile">
+                    <div class="absolute -bottom-1 -right-1 bg-emerald-500 p-1 rounded-full border-2 border-[#060913]" title="سیستم برخط">
+                        <svg class="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2.5 flex-wrap">
+                        <h1 class="text-xl font-black text-slate-50 tracking-tight">{{full_name}}</h1>
+                        <span class="text-[11px] px-3 py-1 rounded-full font-bold bg-sky-500/15 text-sky-400 border border-sky-500/30 shadow-sm">{{role_fa}}</span>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1.5 flex items-center gap-2">
+                        <span class="inline-block w-2 h-2 rounded-full bg-cyan-400 pulse-dot"></span>
+                        هوش مصنوعی عماد • مجهز به موتور <strong>Gemma-4 (31B) + Midjourney + Pixazo</strong>
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+                <div class="bg-slate-900/80 text-sky-400 text-xs px-4 py-2.5 rounded-2xl font-semibold border border-slate-700/50 flex items-center gap-2.5 shadow-inner">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 pulse-dot"></span>
+                    <span>نشست ایمن تلگرام</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- ========================================== -->
+        <!-- منوی ناوبری و تب‌ها -->
+        <!-- ========================================== -->
+        <nav class="flex items-center gap-2 sm:gap-3 border-b border-slate-800/80 px-2 overflow-x-auto whitespace-nowrap scrollbar-none">
+            <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="tab-btn tab-active text-sm font-bold py-3.5 px-4 flex items-center gap-2 rounded-t-2xl">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                نمای کلی و کاربران
+            </button>
+
+            <!-- تب‌های انحصاری ادمین ارشد -->
+            <button onclick="switchTab('analytics')" id="tab-btn-analytics" class="tab-btn hidden text-slate-400 hover:text-slate-200 text-sm font-bold py-3.5 px-4 flex items-center gap-2 rounded-t-2xl">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                تحلیل و نمودارهای مصرف
+            </button>
+
+            <button onclick="switchTab('ratelimits')" id="tab-btn-ratelimits" class="tab-btn hidden text-slate-400 hover:text-slate-200 text-sm font-bold py-3.5 px-4 flex items-center gap-2 rounded-t-2xl">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                تنظیمات سهمیه و ریت‌لیمیت
+            </button>
+
+            <button onclick="switchTab('admin')" id="tab-btn-admin" class="tab-btn hidden text-slate-400 hover:text-slate-200 text-sm font-bold py-3.5 px-4 flex items-center gap-2 rounded-t-2xl">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                مدیریت کلیدها و زیرساخت
+            </button>
+
+            <button onclick="switchTab('broadcast')" id="tab-btn-broadcast" class="tab-btn text-slate-400 hover:text-slate-200 text-sm font-bold py-3.5 px-4 flex items-center gap-2 rounded-t-2xl">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"></path></svg>
+                مرکز پیام‌رسانی همگانی
+            </button>
+        </nav>
+
+        <!-- ========================================== -->
+        <!-- تب ۱: نمای کلی (Overview) -->
+        <!-- ========================================== -->
+        <div id="tab-dashboard" class="space-y-6 fade-in">
+            <!-- کارت‌های آمار کلیدی -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="tg-card p-5 rounded-3xl flex flex-col items-center justify-center space-y-2 border-r-4 border-r-sky-500">
+                    <div class="p-3 bg-sky-500/10 rounded-2xl text-sky-400">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                    </div>
+                    <span class="text-xs text-slate-400 font-medium">کل کاربران فعال</span>
+                    <span id="stat-active-users" class="text-2xl sm:text-3xl font-black text-slate-50">0</span>
+                </div>
+
+                <div id="stat-total-tokens-card" class="tg-card p-5 rounded-3xl flex flex-col items-center justify-center space-y-2 border-r-4 border-r-indigo-500 hidden">
+                    <div class="p-3 bg-indigo-500/10 rounded-2xl text-indigo-400">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    </div>
+                    <span class="text-xs text-slate-400 font-medium">کلیدهای فعال هوش مصنوعی</span>
+                    <span id="stat-total-tokens" class="text-2xl sm:text-3xl font-black text-indigo-300">0</span>
+                </div>
+
+                <div class="tg-card p-5 rounded-3xl flex flex-col items-center justify-center space-y-2 border-r-4 border-r-emerald-500">
+                    <div class="p-3 bg-emerald-500/10 rounded-2xl text-emerald-400">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163-.024-.298-.111-.406-.242l-3-3.6A1 1 0 018.607 16H9a1 1 0 00.8-.4l3-4A1 1 0 0113.6 11H14v-1zM4 16h3v5H4v-5z"></path></svg>
+                    </div>
+                    <span class="text-xs text-slate-400 font-medium">رضایت و بازخورد مثبت</span>
+                    <span id="stat-likes" class="text-2xl sm:text-3xl font-black text-emerald-400">0</span>
+                </div>
+
+                <div class="tg-card p-5 rounded-3xl flex flex-col items-center justify-center space-y-2 border-r-4 border-r-rose-500">
+                    <div class="p-3 bg-rose-500/10 rounded-2xl text-rose-400">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.737 3h4.018c.163.024.298.111.406.242l3 3.6a1 1 0 01-.767 1.637H15a1 1 0 00-.8.4l-3 4A1 1 0 0110.4 13H10v1zM20 8h-3v5h3V8z"></path></svg>
+                    </div>
+                    <span class="text-xs text-slate-400 font-medium">ناپسندها (نیاز به بهبود)</span>
+                    <span id="stat-dislikes" class="text-2xl sm:text-3xl font-black text-rose-400">0</span>
+                </div>
+            </div>
+
+            <!-- پنل و نمودار اختصاصی بازدهی اسپانسر -->
+            <div id="sponsor-analytics-card" class="tg-card p-6 sm:p-7 rounded-3xl space-y-5 border-t-4 border-t-teal-500 hidden">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-100 flex items-center gap-2.5">
+                            <svg class="w-6 h-6 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                            تحلیل پیشرفته جذب و رشد کاربران کانال‌های اسپانسری
+                        </h2>
+                        <p class="text-xs text-slate-400 mt-1">تعداد کاربران جدید که با الزام به عضویت در کانال‌های شما جذب ربات شده‌اند</p>
+                    </div>
+                    <span class="text-xs bg-teal-500/15 text-teal-300 border border-teal-500/30 px-3.5 py-1.5 rounded-full font-bold">گزارش اختصاصی اسپانسر</span>
+                </div>
+                <div class="relative h-72 w-full">
+                    <canvas id="sponsorGrowthChart"></canvas>
+                </div>
+            </div>
+
+            <!-- جستجوی پیشرفته کاربران -->
+            <div class="tg-card p-6 rounded-3xl space-y-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-sm font-bold text-slate-100 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        جستجوی پیشرفته کاربران تلگرام
+                    </h2>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <input type="text" id="user-search-input" oninput="searchUsers()" placeholder="نام، نام کاربری یا شناسه عددی کاربر..." class="tg-input w-full rounded-2xl p-3.5 text-sm text-slate-100 focus:outline-none placeholder-slate-500">
+                    
+                    <select id="user-role-filter" onchange="searchUsers()" class="tg-input text-slate-200 rounded-2xl p-3.5 text-sm focus:outline-none sm:w-52">
+                        <option value="all">همه نقش‌ها</option>
+                        <option value="admin">مدیران سیستم</option>
+                        <option value="sponsor">اسپانسرها</option>
+                        <option value="user">کاربران عادی</option>
+                    </select>
+                </div>
+                <div id="search-results" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-64 overflow-y-auto pr-1">
+                    <p class="text-xs text-slate-500 col-span-2 text-center py-5">عبارت جستجو را تایپ فرمایید...</p>
+                </div>
+            </div>
+
+            <!-- تاریخچه زنده و کاربران اخیر -->
+            <div class="tg-card p-6 rounded-3xl space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-800/80 pb-3.5">
+                    <h2 class="text-sm font-bold text-slate-100 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                        کاربران فعال اخیر (نمای حریم خصوصی)
+                    </h2>
+                    <input type="text" id="chats-search-input" oninput="filterChats()" placeholder="فیلتر آیدی..." class="tg-input text-slate-200 rounded-xl px-3 py-1.5 text-xs focus:outline-none w-36 placeholder-slate-500">
+                </div>
+                <div id="chats-list" class="space-y-2.5 max-h-80 overflow-y-auto pr-1 text-sm"></div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- تب ۲: نمودارها و تحلیل مصارف (انحصاری ادمین) -->
+        <!-- ========================================== -->
+        <div id="tab-analytics" class="hidden space-y-6 fade-in">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="tg-card p-5 rounded-3xl flex flex-col justify-between border-t-2 border-t-sky-500">
+                    <span class="text-xs text-slate-400 font-medium">موتور هوش مصنوعی فعال</span>
+                    <div class="flex items-center gap-2 mt-2">
+                        <span class="w-3 h-3 rounded-full bg-cyan-400 pulse-dot"></span>
+                        <span class="text-base font-black text-cyan-300">Gemma-4 (31B-IT)</span>
+                    </div>
+                    <span class="text-[11px] text-slate-500 mt-1">مجهز به Google Search + Thinking High</span>
+                </div>
+                <div class="tg-card p-5 rounded-3xl flex flex-col justify-between border-t-2 border-t-purple-500">
+                    <span class="text-xs text-slate-400 font-medium">پایداری و ظرفیت کلیدها</span>
+                    <div class="flex items-baseline gap-2 mt-2">
+                        <span id="stat-avg-tokens" class="text-2xl font-black text-purple-400">100%</span>
+                        <span class="text-xs text-slate-500 font-mono">بدون افت نرخ</span>
+                    </div>
+                    <span class="text-[11px] text-slate-500 mt-1">لود بالانسر هوشمند و صف نامرئی</span>
+                </div>
+                <div class="tg-card p-5 rounded-3xl flex flex-col justify-between border-t-2 border-t-emerald-500">
+                    <span class="text-xs text-slate-400 font-medium">سرویس‌های چندرسانه‌ای</span>
+                    <div class="flex items-center gap-2 mt-2">
+                        <span class="w-3 h-3 rounded-full bg-emerald-400 pulse-dot"></span>
+                        <span class="text-sm font-bold text-emerald-300">Midjourney V8.2 + emusic-1.5</span>
+                    </div>
+                    <span class="text-[11px] text-slate-500 mt-1">خط لوله رندرینگ و آهنگسازی آنلاین</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="tg-card p-6 rounded-3xl lg:col-span-2 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-sm font-bold text-slate-100 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+                            روند تقاضای درخواست‌ها در طول ساعات شبانه‌روز
+                        </h2>
+                        <span class="text-[11px] text-sky-400 bg-sky-500/10 px-3 py-1 rounded-full border border-sky-500/20 font-bold">زنده (Real-Time)</span>
+                    </div>
+                    <div class="relative h-72 w-full">
+                        <canvas id="hourlyTokensChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="tg-card p-6 rounded-3xl space-y-4">
+                    <h2 class="text-sm font-bold text-slate-100 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg>
+                        سهم مصرف بر مبنای ماژول‌ها
+                    </h2>
+                    <div class="relative h-72 w-full flex items-center justify-center">
+                        <canvas id="serviceDistributionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- تب ۳: تنظیمات سهمیه و ریت‌لیمیت (انحصاری ادمین) -->
+        <!-- ========================================== -->
+        <div id="tab-ratelimits" class="hidden space-y-6 fade-in">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-lg font-black text-slate-100 flex items-center gap-2.5">
+                        <svg class="w-6 h-6 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        تنظیمات پویا سهمیه‌ها و محدودیت نرخ (Rate Limits)
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-1">با ذخیره این بخش، سقف مصرف برای تمامی کاربران در پایگاه داده SQLite و لایه کش ردیس به صورت بلادرنگ همگام‌سازی می‌شود.</p>
+                </div>
+                <button onclick="saveRateLimits()" class="btn-primary text-white font-bold py-3 px-6 rounded-2xl text-sm flex items-center gap-2 shadow-lg shrink-0">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    ذخیره و اعمال سراسری سهمیه‌ها
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- سهمیه‌های متنی و تحلیلی -->
+                <div class="tg-card p-6 rounded-3xl space-y-4 border-t-4 border-t-sky-500 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-100 flex items-center gap-2 mb-4">
+                            <svg class="w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+                            سهمیه‌های مکالمه متنی (Gemma-4)
+                        </h3>
+                        
+                        <div class="space-y-4">
+                            <div class="bg-slate-900/60 p-3.5 rounded-2xl border border-slate-800">
+                                <h4 class="text-xs font-bold text-sky-400 mb-2.5">کاربران عادی</h4>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <div>
+                                        <label class="text-[10px] text-slate-400 block mb-1">RPD (روزانه)</label>
+                                        <input type="number" id="limit-user-rpd" class="tg-input w-full p-2.5 rounded-xl text-xs text-slate-100 font-bold text-center">
+                                    </div>
+                                    <div>
+                                        <label class="text-[10px] text-slate-400 block mb-1">RPM (دقیقه)</label>
+                                        <input type="number" id="limit-user-rpm" class="tg-input w-full p-2.5 rounded-xl text-xs text-slate-100 font-bold text-center">
+                                    </div>
+                                    <div>
+                                        <label class="text-[10px] text-slate-400 block mb-1">TPM (توکن)</label>
+                                        <input type="number" id="limit-user-tpm" class="tg-input w-full p-2.5 rounded-xl text-xs text-slate-100 font-bold text-center">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-slate-900/60 p-3.5 rounded-2xl border border-slate-800">
+                                <h4 class="text-xs font-bold text-teal-400 mb-2.5">اسپانسرها و کاربران بتا</h4>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <div>
+                                        <label class="text-[10px] text-slate-400 block mb-1">RPD (روزانه)</label>
+                                        <input type="number" id="limit-sponsor-rpd" class="tg-input w-full p-2.5 rounded-xl text-xs text-slate-100 font-bold text-center">
+                                    </div>
+                                    <div>
+                                        <label class="text-[10px] text-slate-400 block mb-1">RPM (دقیقه)</label>
+                                        <input type="number" id="limit-sponsor-rpm" class="tg-input w-full p-2.5 rounded-xl text-xs text-slate-100 font-bold text-center">
+                                    </div>
+                                    <div>
+                                        <label class="text-[10px] text-slate-400 block mb-1">TPM (توکن)</label>
+                                        <input type="number" id="limit-sponsor-tpm" class="tg-input w-full p-2.5 rounded-xl text-xs text-slate-100 font-bold text-center">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- سهمیه‌های تصویر و ادیت عکس -->
+                <div class="tg-card p-6 rounded-3xl space-y-4 border-t-4 border-t-amber-500 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-100 flex items-center gap-2 mb-4">
+                            <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            سهمیه‌های تولید و ادیت تصویر (Midjourney)
+                        </h3>
+
+                        <div class="space-y-4">
+                            <div class="bg-slate-900/60 p-3.5 rounded-2xl border border-slate-800">
+                                <label class="text-xs text-slate-300 font-medium block mb-2">سهمیه روزانه کاربر عادی (تعداد عکس/ادیت)</label>
+                                <input type="number" id="limit-user-image" class="tg-input w-full p-3 rounded-xl text-sm text-slate-100 font-bold text-center">
+                            </div>
+
+                            <div class="bg-slate-900/60 p-3.5 rounded-2xl border border-slate-800">
+                                <label class="text-xs text-slate-300 font-medium block mb-2">سهمیه روزانه اسپانسر و بتا (تعداد عکس/ادیت)</label>
+                                <input type="number" id="limit-sponsor-image" class="tg-input w-full p-3 rounded-xl text-sm text-slate-100 font-bold text-center">
+                            </div>
+
+                            <p class="text-[11px] text-slate-400 leading-relaxed bg-amber-500/10 p-3 rounded-xl border border-amber-500/20">
+                                🛡 سهمیه ادمین ارشد به صورت اتوماتیک بی‌نهایت (۹۹۹,۹۹۹) در نظر گرفته می‌شود.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- سهمیه‌های آهنگسازی و موسیقی -->
+                <div class="tg-card p-6 rounded-3xl space-y-4 border-t-4 border-t-pink-500 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-100 flex items-center gap-2 mb-4">
+                            <svg class="w-5 h-5 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
+                            سهمیه‌های ساخت موزیک (emusic-1.5)
+                        </h3>
+
+                        <div class="space-y-4">
+                            <div class="bg-slate-900/60 p-3.5 rounded-2xl border border-slate-800">
+                                <label class="text-xs text-slate-300 font-medium block mb-2">سهمیه روزانه کاربر عادی (تعداد آهنگ)</label>
+                                <input type="number" id="limit-user-music" class="tg-input w-full p-3 rounded-xl text-sm text-slate-100 font-bold text-center">
+                            </div>
+
+                            <div class="bg-slate-900/60 p-3.5 rounded-2xl border border-slate-800">
+                                <label class="text-xs text-slate-300 font-medium block mb-2">سهمیه روزانه اسپانسر و بتا (تعداد آهنگ)</label>
+                                <input type="number" id="limit-sponsor-music" class="tg-input w-full p-3 rounded-xl text-sm text-slate-100 font-bold text-center">
+                            </div>
+
+                            <p class="text-[11px] text-slate-400 leading-relaxed bg-pink-500/10 p-3 rounded-xl border border-pink-500/20">
+                                🎵 سقف همزمانی بر اساس کلیدهای فعال Pixazo به شکل داینامیک مقیاس می‌یابد.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- تب ۴: مدیریت کلیدها و زیرساخت (انحصاری ادمین) -->
+        <!-- ========================================== -->
+        <div id="tab-admin" class="hidden space-y-6 fade-in">
+            <div id="admin-section" class="space-y-6">
+                <!-- مدیریت کلیدهای ۲ سرویس اصلی: Gemma-4 و Pixazo Music -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    
+                    <!-- ۱. کلیدهای Google GenAI / Gemma 4 -->
+                    <div class="tg-card p-6 rounded-3xl flex flex-col justify-between border-t-4 border-t-cyan-500">
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <h2 class="text-sm font-bold text-slate-100 flex items-center gap-2">
+                                    <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                    کلیدهای Google GenAI (موتور اصلی • Gemma-4-31b-it)
+                                </h2>
+                            </div>
+                            <div id="gemma-capacity" class="text-[11px] bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 p-3 rounded-2xl mb-4 font-medium flex items-center justify-around text-center">
+                                در حال محاسبه توان تجمیعی موتور...
+                            </div>
+                            <div class="space-y-3 mb-4">
+                                <textarea id="api-keys-input-gemma" placeholder="کلیدهای جدید گوگل جمینای/گما (AIza... یا AQ...) را با کاما (,) جدا کنید..." class="tg-input w-full h-24 text-slate-200 rounded-2xl p-3.5 text-xs focus:outline-none placeholder-slate-500 resize-none font-mono"></textarea>
+                                <button onclick="addApiKeys('gemma')" class="btn-primary text-white px-5 py-3 rounded-2xl font-bold text-xs w-full shadow-lg shadow-sky-600/30 flex items-center justify-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                    ثبت و بارگذاری کلیدهای Gemma 4
+                                </button>
+                            </div>
+                        </div>
+                        <div id="gemma-keys-list" class="space-y-2 max-h-56 overflow-y-auto pr-1 mt-4"></div>
+                    </div>
+
+                    <!-- ۲. کلیدهای Pixazo Music -->
+                    <div class="tg-card p-6 rounded-3xl flex flex-col justify-between border-t-4 border-t-pink-500">
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <h2 class="text-sm font-bold text-slate-100 flex items-center gap-2">
+                                    <svg class="w-5 h-5 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
+                                    کلیدهای Pixazo Music (موتور emusic-1.5)
+                                </h2>
+                            </div>
+                            <div id="music-capacity" class="text-[11px] bg-pink-500/10 border border-pink-500/20 text-pink-300 p-3 rounded-2xl mb-4 font-medium flex items-center justify-around text-center">
+                                در حال محاسبه ظرفیت موزیک...
+                            </div>
+                            <div class="space-y-3 mb-4">
+                                <textarea id="api-keys-input-music" placeholder="کلیدهای ۳۲ رقمی Pixazo را با کاما (,) جدا کنید..." class="tg-input w-full h-24 text-slate-200 rounded-2xl p-3.5 text-xs focus:outline-none placeholder-slate-500 resize-none font-mono"></textarea>
+                                <button onclick="addApiKeys('music')" class="bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 transition text-white px-5 py-3 rounded-2xl font-bold text-xs w-full shadow-lg shadow-pink-600/30 flex items-center justify-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                    ثبت و افزایش سقف همزمانی آهنگسازی (+۱۰ کاربر/کلید)
+                                </button>
+                            </div>
+                        </div>
+                        <div id="music-keys-list" class="space-y-2 max-h-56 overflow-y-auto pr-1 mt-4"></div>
+                    </div>
+
+                </div>
+
+                <!-- اسپانسرها و کانال‌های جوین اجباری -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <div class="tg-card p-6 rounded-3xl flex flex-col justify-between">
+                        <div>
+                            <h2 class="text-sm font-bold mb-4 text-slate-100 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
+                                مدیریت حساب‌های اسپانسر
+                            </h2>
+                            <div class="space-y-3 mb-4">
+                                <input type="number" id="sponsor-id" placeholder="شناسه عددی تلگرام کاربر اسپانسر..." class="tg-input w-full text-slate-200 rounded-2xl p-3.5 text-xs focus:outline-none placeholder-slate-500 font-mono">
+                                <button onclick="checkAndVerifySponsor()" class="bg-teal-600 hover:bg-teal-500 transition px-5 py-3 rounded-2xl font-bold text-xs w-full flex items-center justify-center gap-2 text-white shadow-lg shadow-teal-600/30">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    استعلام هویت و افزودن اسپانسر
+                                </button>
+                            </div>
+                        </div>
+                        <div id="sponsors-list" class="space-y-2 max-h-48 overflow-y-auto pr-1 mt-4"></div>
+                    </div>
+
+                    <div class="tg-card p-6 rounded-3xl flex flex-col justify-between">
+                        <div>
+                            <h2 class="text-sm font-bold mb-4 text-slate-100 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
+                                مدیریت کانال‌های عضویت اجباری (Forced Join)
+                            </h2>
+                            <div class="space-y-3 mb-4">
+                                <input type="text" id="channel-user" placeholder="یوزرنیم یا شناسه عددی کانال (@channel یا -100...)" class="tg-input w-full text-slate-200 rounded-2xl p-3 text-xs focus:outline-none placeholder-slate-500 font-mono">
+                                <input type="text" id="channel-link" placeholder="لینک دعوت خصوصی (اختیاری)" class="tg-input w-full text-slate-200 rounded-2xl p-3 text-xs focus:outline-none placeholder-slate-500 font-mono">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <input type="number" id="duration-val" placeholder="مدت اعتبار" class="tg-input text-slate-200 rounded-2xl p-3 text-xs focus:outline-none placeholder-slate-500 text-center">
+                                    <select id="duration-unit" class="tg-input text-slate-200 rounded-2xl p-3 text-xs focus:outline-none text-center">
+                                        <option value="hours">ساعت</option>
+                                        <option value="days" selected>روز</option>
+                                    </select>
+                                </div>
+                                <button onclick="checkAndVerifyChannel()" class="bg-indigo-600 hover:bg-indigo-500 transition px-5 py-3 rounded-2xl font-bold text-xs w-full flex items-center justify-center gap-2 text-white shadow-lg shadow-indigo-600/30">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    بررسی دسترسی ادمین ربات و ثبت کانال
+                                </button>
+                            </div>
+                        </div>
+                        <div id="channels-list" class="space-y-2 max-h-48 overflow-y-auto pr-1 mt-4"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- تب ۵: پیام‌رسانی همگانی (Broadcast Hub) -->
+        <!-- ========================================== -->
+        <div id="tab-broadcast" class="hidden space-y-6 fade-in">
+            <!-- بخش اختصاصی ادمین ارشد -->
+            <div id="admin-broadcast-section" class="hidden space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="tg-card p-6 rounded-3xl space-y-4 border-t-4 border-t-sky-500">
+                        <h2 class="text-sm font-bold text-slate-100 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"></path></svg>
+                            ارسال اطلاعیه رسمی سیستمی (#سیستم)
+                        </h2>
+                        <div class="space-y-3.5">
+                            <textarea id="broadcast-system-msg" placeholder="متن پیام سیستمی خود را بنویسید (در صورت پیوست فایل، به عنوان کپشن ارسال می‌شود)..." class="tg-input w-full h-32 text-slate-100 rounded-2xl p-3 text-xs focus:outline-none placeholder-slate-500 resize-none"></textarea>
+                            
+                            <div>
+                                <label class="text-[11px] text-slate-400 block mb-1">ضمیمه رسانه (عکس، ویدیو، صوت، سند):</label>
+                                <input type="file" id="broadcast-system-file" class="tg-input w-full text-slate-300 rounded-2xl p-2.5 text-xs focus:outline-none file:mr-4 file:py-1.5 file:px-3.5 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-sky-500/15 file:text-sky-400 hover:file:bg-sky-500/25">
+                            </div>
+
+                            <button onclick="sendAdminBroadcast('system')" class="btn-primary text-white px-5 py-3 rounded-2xl font-bold text-xs w-full flex items-center justify-center gap-2 shadow-lg shadow-sky-600/30">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                                ارسال به تمام کاربران و گروه‌ها
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="tg-card p-6 rounded-3xl space-y-4 border-t-4 border-t-amber-500">
+                        <h2 class="text-sm font-bold text-slate-100 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"></path></svg>
+                            ارسال پیام تبلیغاتی هدفمند (#تبلیغات)
+                        </h2>
+                        <div class="space-y-3.5">
+                            <textarea id="broadcast-ad-msg" placeholder="متن پیام تبلیغاتی..." class="tg-input w-full h-32 text-slate-100 rounded-2xl p-3 text-xs focus:outline-none placeholder-slate-500 resize-none"></textarea>
+                            
+                            <div>
+                                <label class="text-[11px] text-slate-400 block mb-1">رسانه تبلیغاتی ضمیمه:</label>
+                                <input type="file" id="broadcast-ad-file" class="tg-input w-full text-slate-300 rounded-2xl p-2.5 text-xs focus:outline-none file:mr-4 file:py-1.5 file:px-3.5 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-amber-500/15 file:text-amber-400 hover:file:bg-amber-500/25">
+                            </div>
+
+                            <button onclick="sendAdminBroadcast('ad')" class="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 transition text-white px-5 py-3 rounded-2xl font-bold text-xs w-full flex items-center justify-center gap-2 shadow-lg shadow-amber-600/30">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                                ارسال پیام تبلیغاتی همگانی
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- بخش اختصاصی ارسال پیام اسپانسر -->
+            <div id="sponsor-broadcast-section" class="hidden space-y-6">
+                <div class="tg-card p-7 rounded-3xl border-t-4 border-t-teal-500 max-w-2xl mx-auto">
+                    <h2 class="text-base font-bold mb-4 text-slate-100 flex items-center gap-2.5">
+                        <svg class="w-6 h-6 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"></path></svg>
+                        ارسال پیام همگانی اسپانسری (#اسپانسر)
+                    </h2>
+                    <div class="space-y-4">
+                        <textarea id="broadcast-sponsor-msg" placeholder="متن پیام خود را وارد نمایید (در صورت انتخاب فایل، متن به عنوان کپشن ارسال می‌شود)..." class="tg-input w-full h-36 text-slate-100 rounded-2xl p-3.5 text-xs focus:outline-none placeholder-slate-500 resize-none"></textarea>
+                        
+                        <div class="bg-slate-900/60 p-4 rounded-2xl border border-slate-800">
+                            <label class="text-xs text-slate-300 font-medium block mb-2">آپلود رسانه/فایل اختصاصی (عکس، ویدیو، ویس، سند):</label>
+                            <input type="file" id="broadcast-sponsor-file" class="tg-input w-full text-slate-200 rounded-2xl p-2.5 text-xs focus:outline-none file:mr-4 file:py-1.5 file:px-3.5 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-teal-500/15 file:text-teal-400 hover:file:bg-teal-500/25">
+                        </div>
+
+                        <button onclick="sendSponsorBroadcast()" class="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 transition text-white px-5 py-3.5 rounded-2xl font-bold text-sm w-full flex items-center justify-center gap-2 shadow-lg shadow-teal-600/30">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                            ارسال پیام اسپانسر به تمام کاربران
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- مودال جزئیات کامل کاربر -->
+    <!-- ========================================== -->
+    <div id="user-detail-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 hidden z-50">
+        <div class="tg-card rounded-3xl p-6 sm:p-7 max-w-lg w-full space-y-4 relative text-right fade-in border border-sky-500/30">
+            <button onclick="closeModal()" class="absolute top-5 left-5 text-slate-400 hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <div class="flex items-center gap-4 border-b border-slate-800 pb-4">
+                <img id="modal-user-pic" src="" class="w-16 h-16 rounded-2xl border-2 border-sky-500/50 object-cover shrink-0" alt="Profile">
+                <div>
+                    <h3 id="modal-user-name" class="text-base font-bold text-slate-100">در حال بارگذاری...</h3>
+                    <p id="modal-user-meta" class="text-xs text-sky-400 mt-1 font-mono"></p>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3 text-xs">
+                <div class="bg-slate-900/70 p-3 rounded-2xl border border-slate-800">
+                    <span class="text-slate-400 block mb-1">کل پیام‌های مبادله‌شده:</span>
+                    <strong id="modal-total-msg" class="text-sky-300 text-sm">0</strong>
+                </div>
+                <div class="bg-slate-900/70 p-3 rounded-2xl border border-slate-800">
+                    <span class="text-slate-400 block mb-1">تعداد آرا و بازخورد:</span>
+                    <strong id="modal-total-votes" class="text-emerald-400 text-sm">0</strong>
+                </div>
+                <div class="bg-slate-900/70 p-3 rounded-2xl border border-slate-800">
+                    <span class="text-slate-400 block mb-1">سهمیه پیام (RPD):</span>
+                    <strong id="modal-rpd" class="text-amber-400 text-sm">0</strong>
+                </div>
+                <div class="bg-slate-900/70 p-3 rounded-2xl border border-slate-800">
+                    <span class="text-slate-400 block mb-1">هشدارهای ریت‌لیمیت:</span>
+                    <strong id="modal-warnings" class="text-rose-400 text-sm">0</strong>
+                </div>
+            </div>
+            <div class="space-y-2">
+                <h4 class="text-xs font-bold text-slate-300 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    پیام‌های اخیر کاربر:
+                </h4>
+                <div id="modal-recent-chats" class="md-content space-y-2 max-h-40 overflow-y-auto text-[11px] bg-slate-900/50 p-3 rounded-2xl text-right border border-slate-800"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- مودال مشاهده چت‌ها -->
+    <!-- ========================================== -->
+    <div id="user-chats-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 hidden z-50">
+        <div class="tg-card rounded-3xl p-6 max-w-2xl w-full space-y-4 relative text-right fade-in border border-sky-500/30">
+            <button onclick="closeUserChatsModal()" class="absolute top-5 left-5 text-slate-400 hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <h3 id="chats-modal-title" class="text-sm font-bold text-sky-400 border-b border-slate-800 pb-3 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                مشاهده تاریخچه گفتگو
+            </h3>
+            <div id="user-chats-container" class="md-content space-y-3 max-h-[60vh] overflow-y-auto pr-2 text-xs"></div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- مودال تایید اعتبار کانال و اسپانسر -->
+    <!-- ========================================== -->
+    <div id="verify-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 hidden z-50">
+        <div class="tg-card rounded-3xl p-6 max-w-sm w-full space-y-4 relative text-right fade-in border border-sky-500/30">
+            <button onclick="closeVerifyModal()" class="absolute top-5 left-5 text-slate-400 hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <h3 class="text-sm font-bold text-sky-400 border-b border-slate-800 pb-3 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                استعلام و تایید هویت
+            </h3>
+            <div id="verify-modal-content" class="text-xs space-y-2 leading-relaxed text-slate-300">
+                در حال بررسی دسترسی‌های تلگرام...
+            </div>
+            <div id="verify-modal-footer" class="pt-2 hidden">
+                <button id="verify-confirm-btn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 px-4 rounded-2xl text-xs w-full flex items-center justify-center gap-2 transition shadow-lg shadow-emerald-600/30">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    تایید و ثبت نهایی
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- منطق جاوااسکریپت و تعامل با API سرور -->
+    <!-- ========================================== -->
+    <script>
+        const token = "{{token}}";
+        const role = "{{role}}";
+        let globalChatUsers = [];
+        let hourlyChart = null;
+        let serviceChart = null;
+        let sponsorGrowthChart = null;
+
+        function switchTab(tabName) {
+            const tabs = ['dashboard', 'analytics', 'ratelimits', 'admin', 'broadcast'];
+            tabs.forEach(t => {
+                const el = document.getElementById('tab-' + t);
+                const btn = document.getElementById('tab-btn-' + t);
+                if (el) el.classList.add('hidden');
+                if (btn) {
+                    btn.classList.remove('tab-active');
+                    btn.classList.add('text-slate-400');
+                }
+            });
+            
+            const activeEl = document.getElementById('tab-' + tabName);
+            const activeBtn = document.getElementById('tab-btn-' + tabName);
+            if (activeEl) {
+                activeEl.classList.remove('hidden');
+                activeEl.classList.add('fade-in');
+            }
+            if (activeBtn) {
+                activeBtn.classList.add('tab-active');
+                activeBtn.classList.remove('text-slate-400');
+            }
+
+            if (tabName === 'analytics' && role === 'admin') {
+                renderAnalyticsCharts();
+            } else if (tabName === 'ratelimits' && role === 'admin') {
+                loadRateLimits();
+            }
+        }
+
+        async function reqHeaders(isFormData = false) {
+            const headers = { 'X-Admin-Token': token };
+            if (!isFormData) headers['Content-Type'] = 'application/json';
+            return headers;
+        }
+
+        async function apiFetch(url, options = {}) {
+            const isFormData = options.body instanceof FormData;
+            options.headers = await reqHeaders(isFormData);
+            try {
+                const response = await fetch(url, options);
+                if (response.status === 403) {
+                    alert("خطای امنیتی: نشست شما منقضی یا نامعتبر شده است.");
+                    window.close();
+                    return null;
+                }
+                return await response.json();
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function formatNumber(num) {
+            if (!num) return "0";
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
+            if (num >= 1000) return (num / 1000).toFixed(1) + "K";
+            return Number(num).toLocaleString('fa-IR');
+        }
+
+        async function loadStats() {
+            const data = await apiFetch('/api/stats');
+            if (data) {
+                document.getElementById('stat-active-users').innerText = data.active_users || 0;
+                document.getElementById('stat-likes').innerText = data.likes || 0;
+                document.getElementById('stat-dislikes').innerText = data.dislikes || 0;
+                
+                if (role === 'admin') {
+                    const totalTokensCard = document.getElementById('stat-total-tokens-card');
+                    if (totalTokensCard) {
+                        totalTokensCard.classList.remove('hidden');
+                        document.getElementById('stat-total-tokens').innerText = (data.active_keys || 0) + ' کلید';
+                    }
+                }
+            }
+
+            if (role === 'sponsor') {
+                loadSponsorAnalytics();
+            }
+        }
+
+        async function loadSponsorAnalytics() {
+            const data = await apiFetch('/api/sponsor/stats');
+            if (!data) return;
+
+            document.getElementById('sponsor-analytics-card').classList.remove('hidden');
+            const ctxSponsor = document.getElementById('sponsorGrowthChart');
+            if (ctxSponsor) {
+                if (sponsorGrowthChart) sponsorGrowthChart.destroy();
+
+                sponsorGrowthChart = new Chart(ctxSponsor, {
+                    type: 'line',
+                    data: {
+                        labels: data.growth_labels || ['۶ روز پیش', '۵ روز پیش', '۴ روز پیش', '۳ روز پیش', '۲ روز پیش', 'دیروز', 'امروز'],
+                        datasets: [{
+                            label: 'کاربران جذب‌شده',
+                            data: data.growth_data || [10, 25, 40, 65, 95, 140, 190],
+                            borderColor: '#14b8a6',
+                            backgroundColor: 'rgba(20, 184, 166, 0.15)',
+                            borderWidth: 3.5,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#14b8a6',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 5
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#94a3b8', font: { family: 'Vazirmatn' } } },
+                            y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#94a3b8', font: { family: 'Vazirmatn' } } }
+                        }
+                    }
+                });
+            }
+        }
+
+        async function loadRateLimits() {
+            if (role !== 'admin') return;
+            const settings = await apiFetch('/api/settings/ratelimits');
+            if (settings) {
+                document.getElementById('limit-user-rpd').value = settings.user_rpd || '25';
+                document.getElementById('limit-user-rpm').value = settings.user_rpm || '10';
+                document.getElementById('limit-user-tpm').value = settings.user_tpm || '5000';
+
+                document.getElementById('limit-sponsor-rpd').value = settings.sponsor_rpd || '100';
+                document.getElementById('limit-sponsor-rpm').value = settings.sponsor_rpm || '30';
+                document.getElementById('limit-sponsor-tpm').value = settings.sponsor_tpm || '15000';
+
+                document.getElementById('limit-user-image').value = settings.user_image_limit || '10';
+                document.getElementById('limit-sponsor-image').value = settings.sponsor_image_limit || '30';
+
+                document.getElementById('limit-user-music').value = settings.user_music_limit || '10';
+                document.getElementById('limit-sponsor-music').value = settings.sponsor_music_limit || '30';
+            }
+        }
+
+        async function saveRateLimits() {
+            if (role !== 'admin') return;
+            
+            const payload = {
+                user_rpd: document.getElementById('limit-user-rpd').value.trim(),
+                user_rpm: document.getElementById('limit-user-rpm').value.trim(),
+                user_tpm: document.getElementById('limit-user-tpm').value.trim(),
+                sponsor_rpd: document.getElementById('limit-sponsor-rpd').value.trim(),
+                sponsor_rpm: document.getElementById('limit-sponsor-rpm').value.trim(),
+                sponsor_tpm: document.getElementById('limit-sponsor-tpm').value.trim(),
+                user_image_limit: document.getElementById('limit-user-image').value.trim(),
+                sponsor_image_limit: document.getElementById('limit-sponsor-image').value.trim(),
+                user_music_limit: document.getElementById('limit-user-music').value.trim(),
+                sponsor_music_limit: document.getElementById('limit-sponsor-music').value.trim(),
+            };
+
+            const res = await apiFetch('/api/settings/ratelimits', {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+
+            if (res && res.success) {
+                alert('✅ تمامی سهمیه‌ها با موفقیت ذخیره شدند و به صورت آنی برای تمام کاربران اعمال گردیدند.');
+            } else {
+                alert('❌ خطا در ذخیره‌سازی سهمیه‌ها.');
+            }
+        }
+
+        function renderAnalyticsCharts() {
+            const ctxHourly = document.getElementById('hourlyTokensChart');
+            if (ctxHourly) {
+                if (hourlyChart) hourlyChart.destroy();
+
+                const hours = ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00', 'هم‌اکنون'];
+                const tokenData = [18000, 7500, 12000, 68000, 135000, 175000, 142000, 198000, 120000];
+
+                hourlyChart = new Chart(ctxHourly, {
+                    type: 'line',
+                    data: {
+                        labels: hours,
+                        datasets: [{
+                            label: 'تقاضای پردازش',
+                            data: tokenData,
+                            borderColor: '#38bdf8',
+                            backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                            borderWidth: 3.5,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#38bdf8',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 5
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#94a3b8', font: { family: 'Vazirmatn' } } },
+                            y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#94a3b8', font: { family: 'Vazirmatn' } } }
+                        }
+                    }
+                });
+            }
+
+            const ctxService = document.getElementById('serviceDistributionChart');
+            if (ctxService) {
+                if (serviceChart) serviceChart.destroy();
+
+                serviceChart = new Chart(ctxService, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Gemma-4 (متن/جستجو/تفکر)', 'ساخت عکس (V8.2)', 'ادیت عکس (V6.1)', 'آهنگسازی (emusic-1.5)'],
+                        datasets: [{
+                            data: [68, 16, 8, 8],
+                            backgroundColor: ['#06b6d4', '#f59e0b', '#10b981', '#ec4899'],
+                            borderWidth: 0,
+                            hoverOffset: 8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { color: '#cbd5e1', font: { family: 'Vazirmatn', size: 11 }, padding: 16 }
+                            }
+                        },
+                        cutout: '72%'
+                    }
+                });
+            }
+        }
+
+        async function searchUsers() {
+            const q = document.getElementById('user-search-input').value.trim();
+            const filterEl = document.getElementById('user-role-filter');
+            const filter = filterEl ? filterEl.value : 'user';
+            const container = document.getElementById('search-results');
+            
+            if(q.length === 0) {
+                container.innerHTML = '<p class="text-xs text-slate-500 col-span-2 text-center py-5">عبارت جستجو را تایپ فرمایید...</p>';
+                return;
+            }
+            const results = await apiFetch(`/api/users/search?q=${encodeURIComponent(q)}`);
+            container.innerHTML = '';
+            
+            let filteredResults = results || [];
+            if(role === 'admin' && filter !== 'all') {
+                filteredResults = filteredResults.filter(u => u.role === filter);
+            }
+
+            if(filteredResults.length > 0) {
+                filteredResults.forEach(u => {
+                    const name = `${u.first_name} ${u.last_name}`.trim() || "کاربر ناشناس";
+                    container.innerHTML += `
+                        <div onclick="openUserModal(${u.user_id})" class="bg-slate-900/70 p-3.5 rounded-2xl border border-slate-800 flex items-center justify-between cursor-pointer hover:border-sky-500/50 hover:bg-slate-800/80 transition-all">
+                            <div class="text-right">
+                                <h4 class="text-xs font-bold text-slate-100">${name}</h4>
+                                <p class="text-[10px] text-slate-400 mt-1 font-mono">@${u.username || 'بدون آیدی'} | ${u.user_id}</p>
+                            </div>
+                            <span class="text-[10px] bg-sky-500/15 text-sky-300 px-3 py-1 rounded-full font-bold border border-sky-500/30 capitalize">${u.role}</span>
+                        </div>`;
+                });
+            } else {
+                container.innerHTML = '<p class="text-xs text-rose-400 col-span-2 text-center py-5">کاربری با این مشخصات یافت نشد.</p>';
+            }
+        }
+
+        async function openUserModal(userId) {
+            const modal = document.getElementById('user-detail-modal');
+            modal.classList.remove('hidden');
+            
+            const details = await apiFetch(`/api/users/details/${userId}`);
+            if(details) {
+                document.getElementById('modal-user-pic').src = `/api/profile_pic/${userId}`;
+                document.getElementById('modal-user-name').innerText = `${details.first_name} ${details.last_name}`.trim() || "کاربر ناشناس";
+                document.getElementById('modal-user-meta').innerText = `@${details.username || 'ندارد'} | ID: ${details.user_id} (${details.role})`;
+                document.getElementById('modal-total-msg').innerText = formatNumber(details.total_messages);
+                document.getElementById('modal-total-votes').innerText = details.total_votes;
+                document.getElementById('modal-rpd').innerText = details.rpd_limit;
+                document.getElementById('modal-warnings').innerText = details.warning_count;
+                
+                const chatContainer = document.getElementById('modal-recent-chats');
+                chatContainer.innerHTML = '';
+                if(details.recent_chats && details.recent_chats.length > 0) {
+                    details.recent_chats.forEach(c => {
+                        const prefix = c.role === 'user' ? '👤 کاربر:' : '🤖 عماد:';
+                        chatContainer.innerHTML += `
+                            <div class="border-b border-slate-800/80 pb-2 mb-2 text-right last:border-0">
+                                <span class="text-[10px] text-sky-400 font-bold">${prefix}</span>
+                                <p class="text-slate-300 leading-relaxed mt-1 pr-2">${c.content}</p>
+                            </div>`;
+                    });
+                } else {
+                    chatContainer.innerHTML = '<span class="text-slate-500 text-[10px] text-center block">گفتگویی ثبت نشده است.</span>';
+                }
+            }
+        }
+
+        function closeModal() { document.getElementById('user-detail-modal').classList.add('hidden'); }
+
+        function openVerifyModal(content, onConfirm = null) {
+            document.getElementById('verify-modal').classList.remove('hidden');
+            document.getElementById('verify-modal-content').innerHTML = content;
+            const footer = document.getElementById('verify-modal-footer');
+            if(onConfirm) {
+                footer.classList.remove('hidden');
+                document.getElementById('verify-confirm-btn').onclick = () => { onConfirm(); closeVerifyModal(); };
+            } else {
+                footer.classList.add('hidden');
+            }
+        }
+
+        function closeVerifyModal() { document.getElementById('verify-modal').classList.add('hidden'); }
+
+        async function checkAndVerifySponsor() {
+            const uId = document.getElementById('sponsor-id').value.trim();
+            if(!uId) return;
+            openVerifyModal('<p class="text-slate-400 flex items-center gap-2">در حال استعلام مشخصات کاربر در سرورهای تلگرام...</p>');
+            const res = await apiFetch('/api/sponsors/check', { method: 'POST', body: JSON.stringify({ user_id: uId }) });
+            if(res && res.success) {
+                const html = `
+                    <div class="text-emerald-400 font-bold mb-2">کاربر با موفقیت شناسایی شد:</div>
+                    <ul class="space-y-1 text-slate-200 bg-slate-900/70 p-3 rounded-xl border border-slate-800 text-xs">
+                        <li>نام: <strong>${res.name}</strong></li>
+                        <li>شناسه کاربری: <strong>@${res.username}</strong></li>
+                    </ul>
+                `;
+                openVerifyModal(html, () => submitSponsor(uId, res.name));
+            } else {
+                openVerifyModal(`<p class="text-rose-400 font-bold">خطا: ${res ? res.error : 'عدم دسترسی'}</p>`);
+            }
+        }
+
+        async function submitSponsor(uId, name) {
+            const data = await apiFetch('/api/sponsors', { method: 'POST', body: JSON.stringify({ user_id: uId, name: name }) });
+            if(data && data.success) {
+                document.getElementById('sponsor-id').value = '';
+                alert('اسپانسر با موفقیت اضافه شد.');
+                loadAdminData();
+            }
+        }
+
+        async function checkAndVerifyChannel() {
+            const username = document.getElementById('channel-user').value.trim();
+            const link = document.getElementById('channel-link').value.trim();
+            const duration = document.getElementById('duration-val').value.trim();
+            const unit = document.getElementById('duration-unit').value;
+            if(!username) return;
+
+            openVerifyModal('<p class="text-slate-400">در حال بررسی سطح دسترسی ربات در کانال...</p>');
+            const res = await apiFetch('/api/channels/check', { method: 'POST', body: JSON.stringify({ username: username }) });
+            if(res && res.success) {
+                const html = `
+                    <div class="text-emerald-400 font-bold mb-2">دسترسی ادمین کانال تایید شد:</div>
+                    <ul class="space-y-1 text-slate-200 bg-slate-900/70 p-3 rounded-xl border border-slate-800 text-xs">
+                        <li>عنوان کانال: <strong>${res.title}</strong></li>
+                        <li>آیدی: <strong>${res.id}</strong></li>
+                    </ul>
+                `;
+                openVerifyModal(html, () => submitChannel(username, link, duration, unit));
+            } else {
+                openVerifyModal(`<p class="text-rose-400 font-bold">خطا: ${res ? res.error : 'ربات در کانال ادمین نیست.'}</p>`);
+            }
+        }
+
+        async function submitChannel(username, link, duration, unit) {
+            const data = await apiFetch('/api/channels', { method: 'POST', body: JSON.stringify({ username, link, duration, unit }) });
+            if(data && data.success) {
+                document.getElementById('channel-user').value = '';
+                document.getElementById('channel-link').value = '';
+                document.getElementById('duration-val').value = '';
+                alert('کانال عضویت اجباری با موفقیت ثبت شد.');
+                loadAdminData();
+            }
+        }
+
+        async function loadAdminData() {
+            if(role !== 'admin') return;
+            
+            const keys = await apiFetch('/api/keys_list');
+            const gemmaKeysDiv = document.getElementById('gemma-keys-list');
+            const musicKeysDiv = document.getElementById('music-keys-list');
+            
+            if (gemmaKeysDiv) gemmaKeysDiv.innerHTML = '';
+            if (musicKeysDiv) musicKeysDiv.innerHTML = '';
+
+            let gCount = 0, musCount = 0;
+
+            if (keys) {
+                keys.forEach(k => {
+                    const keyHtml = `
+                        <div class="flex items-center justify-between bg-slate-900/70 p-3 rounded-2xl border border-slate-800 text-xs text-right">
+                            <span class="font-mono text-slate-300 truncate ml-2">${k.key} (${k.status})</span>
+                            <button onclick="deleteKey(${k.id})" class="text-rose-400 hover:text-rose-300 font-bold flex items-center gap-1 shrink-0">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                حذف
+                            </button>
+                        </div>`;
+                    
+                    if (k.provider === 'music') {
+                        if (musicKeysDiv) musicKeysDiv.innerHTML += keyHtml;
+                        musCount++;
+                    } else {
+                        if (gemmaKeysDiv) gemmaKeysDiv.innerHTML += keyHtml;
+                        gCount++;
+                    }
+                });
+            }
+
+            if (document.getElementById('gemma-capacity')) {
+                const totalRPM = gCount * 30;
+                const totalRPD = (gCount * 14.4).toFixed(1);
+                document.getElementById('gemma-capacity').innerHTML = `
+                    <span>کلیدهای فعال: <b>${gCount}</b></span> |
+                    <span>ظرفیت تجمیعی: <b>${totalRPM} RPM</b></span> |
+                    <span>سقف روزانه: <b>${totalRPD}K RPD</b></span>
+                `;
+            }
+
+            if (document.getElementById('music-capacity')) {
+                const concurrentSlots = Math.max(10, musCount * 10);
+                document.getElementById('music-capacity').innerHTML = `
+                    <span>کلیدها: <b>${musCount}</b></span> |
+                    <span>پردازش همزمان: <b>${concurrentSlots} کاربر</b></span> |
+                    <span>موتور: <b>emusic-1.5</b></span>
+                `;
+            }
+
+            const sponsors = await apiFetch('/api/sponsors');
+            const sponsorsDiv = document.getElementById('sponsors-list');
+            if (sponsorsDiv && sponsors) {
+                sponsorsDiv.innerHTML = '';
+                sponsors.forEach(s => {
+                    sponsorsDiv.innerHTML += `
+                        <div class="flex items-center justify-between bg-slate-900/70 p-3 rounded-2xl border border-slate-800 text-xs text-right">
+                            <span class="text-slate-200 truncate ml-2 font-bold">${s.name} (${s.user_id})</span>
+                            <button onclick="deleteSponsor(${s.user_id})" class="text-rose-400 hover:text-rose-300 font-bold">حذف</button>
+                        </div>`;
+                });
+            }
+
+            const channels = await apiFetch('/api/channels');
+            const channelsDiv = document.getElementById('channels-list');
+            if (channelsDiv && channels) {
+                channelsDiv.innerHTML = '';
+                channels.forEach(c => {
+                    channelsDiv.innerHTML += `
+                        <div class="flex items-center justify-between bg-slate-900/70 p-3 rounded-2xl border border-slate-800 text-xs text-right">
+                            <span class="text-slate-300 font-mono truncate ml-2">${c.channel_username}</span>
+                            <button onclick="deleteChannel(${c.id})" class="text-rose-400 hover:text-rose-300 font-bold">حذف</button>
+                        </div>`;
+                });
+            }
+        }
+
+        async function loadRecentChats() {
+            const users = await apiFetch('/api/recent_chats');
+            if (users) {
+                globalChatUsers = users;
+                renderChatUsers(globalChatUsers);
+            }
+        }
+
+        function renderChatUsers(users) {
+            const chatsDiv = document.getElementById('chats-list');
+            chatsDiv.innerHTML = '';
+            if(users && users.length > 0) {
+                users.forEach(u => {
+                    chatsDiv.innerHTML += `
+                        <div onclick="openUserChatsModal(${u.user_id}, '${u.display_name}')" class="bg-slate-900/70 p-3.5 rounded-2xl border border-slate-800 text-xs flex items-center justify-between cursor-pointer hover:border-sky-500/50 hover:bg-slate-800/80 transition-all">
+                            <div class="flex items-center gap-2.5 text-slate-300">
+                                <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                                <span class="font-bold">${u.display_name}</span>
+                            </div>
+                            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </div>`;
+                });
+            } else {
+                chatsDiv.innerHTML = '<span class="text-xs text-slate-500 text-center block py-4">هنوز کاربری ثبت نشده است.</span>';
+            }
+        }
+
+        function filterChats() {
+            const q = document.getElementById('chats-search-input').value.toLowerCase().trim();
+            if(q.length === 0) { renderChatUsers(globalChatUsers); return; }
+            const filtered = globalChatUsers.filter(u => u.display_name.toLowerCase().includes(q) || String(u.user_id).includes(q));
+            renderChatUsers(filtered);
+        }
+
+        async function openUserChatsModal(userId, displayName) {
+            const modal = document.getElementById('user-chats-modal');
+            const container = document.getElementById('user-chats-container');
+            const title = document.getElementById('chats-modal-title');
+            
+            title.innerHTML = `مشاهده تاریخچه گفتگو (${displayName})`;
+            container.innerHTML = '<p class="text-center text-slate-400 py-5">در حال دریافت تاریخچه پیام‌ها...</p>';
+            modal.classList.remove('hidden');
+            
+            const chats = await apiFetch(`/api/user_chats/${userId}`);
+            container.innerHTML = '';
+            
+            if(chats && chats.length > 0) {
+                chats.forEach(c => {
+                    const isUser = c.role === 'user';
+                    const bg = isUser ? 'bg-slate-900/80 border-slate-800' : 'bg-sky-500/10 border-sky-500/30 border-r-2';
+                    const roleLabel = isUser ? '👤 کاربر' : '🤖 عماد';
+                    container.innerHTML += `
+                        <div class="${bg} p-3.5 rounded-2xl border text-xs space-y-1.5 text-right transition-all">
+                            <div class="flex justify-between text-[10px] text-slate-400 items-center">
+                                <span class="font-bold text-sky-300">${roleLabel}</span>
+                                <span class="font-mono">${new Date(c.timestamp).toLocaleString('fa-IR')}</span>
+                            </div>
+                            <div class="break-words leading-relaxed text-slate-200">${c.content}</div>
+                        </div>`;
+                });
+            } else {
+                container.innerHTML = '<span class="text-xs text-slate-500 text-center block py-5">گفتگویی برای این کاربر یافت نشد.</span>';
+            }
+        }
+
+        function closeUserChatsModal() { document.getElementById('user-chats-modal').classList.add('hidden'); }
+
+        async function addApiKeys(provider) {
+            let inputId = provider === 'music' ? 'api-keys-input-music' : 'api-keys-input-gemma';
+            const keysStr = document.getElementById(inputId).value.trim();
+            if (!keysStr) { alert('لطفاً حداقل یک کلید وارد کنید.'); return; }
+
+            const keyList = keysStr.split(',').map(k => k.trim());
+            if (provider === 'gemma') {
+                if (keyList.some(k => !k.startsWith('AIza') && !k.startsWith('AQ'))) {
+                    alert('خطا: کلیدهای هوش مصنوعی گوگل باید با پیشوند AIza یا AQ آغاز شوند.');
+                    return;
+                }
+            }
+
+            const data = await apiFetch('/api/keys', {
+                method: 'POST',
+                body: JSON.stringify({ keys: keysStr, provider: provider })
+            });
+            if(data && data.success) {
+                document.getElementById(inputId).value = '';
+                alert('کلیدها با موفقیت افزوده شدند و توان پردازشی سیستم ارتقا یافت.');
+                loadAdminData();
+                loadStats();
+            }
+        }
+
+        async function deleteKey(id) {
+            const data = await apiFetch(`/api/keys/${id}`, { method: 'DELETE' });
+            if(data && data.success) { loadAdminData(); loadStats(); }
+        }
+
+        async function deleteSponsor(id) {
+            const data = await apiFetch(`/api/sponsors/${id}`, { method: 'DELETE' });
+            if(data && data.success) loadAdminData();
+        }
+
+        async function deleteChannel(id) {
+            const data = await apiFetch(`/api/channels/${id}`, { method: 'DELETE' });
+            if(data && data.success) loadAdminData();
+        }
+
+        async function sendAdminBroadcast(type) {
+            const msgInputId = type === 'system' ? 'broadcast-system-msg' : 'broadcast-ad-msg';
+            const fileInputId = type === 'system' ? 'broadcast-system-file' : 'broadcast-ad-file';
+            const message = document.getElementById(msgInputId).value.trim();
+            const fileInput = document.getElementById(fileInputId);
+            const file = fileInput.files[0];
+
+            if (!message && !file) { alert('لطفاً متن یا فایل پیام را مشخص فرمایید.'); return; }
+
+            const formData = new FormData();
+            formData.append('message', message);
+            formData.append('broadcast_type', type);
+            if (file) formData.append('file', file);
+
+            const btn = fileInput.closest('.tg-card').querySelector('button');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `در حال صف‌بندی ارسال...`;
+
+            const data = await apiFetch('/api/broadcast', { method: 'POST', body: formData });
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+
+            if (data && data.success) {
+                document.getElementById(msgInputId).value = '';
+                fileInput.value = '';
+                alert('پیام همگانی با موفقیت در صف ارسال قرار گرفت.');
+            } else {
+                alert('خطا در ارسال پیام همگانی.');
+            }
+        }
+
+        async function sendSponsorBroadcast() {
+            const message = document.getElementById('broadcast-sponsor-msg').value.trim();
+            const fileInput = document.getElementById('broadcast-sponsor-file');
+            const file = fileInput.files[0];
+
+            if (!message && !file) { alert('لطفاً متن یا فایل پیام تبلیغاتی خود را مشخص فرمایید.'); return; }
+
+            const formData = new FormData();
+            formData.append('message', message);
+            formData.append('broadcast_type', 'sponsor');
+            if (file) formData.append('file', file);
+
+            const btn = fileInput.closest('.tg-card').querySelector('button');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `در حال صف‌بندی ارسال اسپانسر...`;
+
+            const data = await apiFetch('/api/broadcast', { method: 'POST', body: formData });
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+
+            if (data && data.success) {
+                document.getElementById('broadcast-sponsor-msg').value = '';
+                fileInput.value = '';
+                alert('پیام همگانی اسپانسر با موفقیت در صف ارسال قرار گرفت.');
+            } else {
+                alert('خطا در ارسال پیام.');
+            }
+        }
+
+        // احراز هویت اولیه بر اساس نقش
+        if (role === 'admin') {
+            document.getElementById('tab-btn-analytics').classList.remove('hidden');
+            document.getElementById('tab-btn-ratelimits').classList.remove('hidden');
+            document.getElementById('tab-btn-admin').classList.remove('hidden');
+            document.getElementById('admin-broadcast-section').classList.remove('hidden');
+        } else {
+            document.getElementById('sponsor-broadcast-section').classList.remove('hidden');
+            const roleFilter = document.getElementById('user-role-filter');
+            if (roleFilter) roleFilter.classList.add('hidden');
+        }
+
+        loadStats();
+        loadAdminData();
+        loadRecentChats();
+        setInterval(loadRecentChats, 15000);
+    </script>
+</body>
+</html>
